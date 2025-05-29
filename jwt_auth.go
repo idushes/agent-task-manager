@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,110 @@ type JWTResponse struct {
 	UserID    string `json:"user_id"`
 }
 
+// UserInfoResponse структура для ответа с информацией о пользователе
+type UserInfoResponse struct {
+	UserID    string `json:"user_id"`
+	ExpiresAt int64  `json:"expires_at"`
+	IssuedAt  int64  `json:"issued_at"`
+	Issuer    string `json:"issuer"`
+}
+
 // Claims структура для JWT claims
 type Claims struct {
 	UserID string `json:"user_id"`
 	jwt.RegisteredClaims
+}
+
+// jwtAuthMiddleware middleware для проверки JWT токена
+func jwtAuthMiddleware(config *Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Получаем токен из заголовка Authorization
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "authorization header is required",
+			})
+			c.Abort()
+			return
+		}
+
+		// Проверяем формат Bearer токена
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid authorization header format. Use: Bearer <token>",
+			})
+			c.Abort()
+			return
+		}
+
+		tokenString := parts[1]
+
+		// Парсим и валидируем токен
+		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+			// Проверяем алгоритм подписи
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, jwt.ErrSignatureInvalid
+			}
+			return []byte(config.SecretKey), nil
+		})
+
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid token: " + err.Error(),
+			})
+			c.Abort()
+			return
+		}
+
+		// Проверяем что токен валидный
+		claims, ok := token.Claims.(*Claims)
+		if !ok || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "invalid token claims",
+			})
+			c.Abort()
+			return
+		}
+
+		// Сохраняем claims в контексте для дальнейшего использования
+		c.Set("claims", claims)
+		c.Set("user_id", claims.UserID)
+
+		c.Next()
+	}
+}
+
+// meHandler обработчик для получения информации о текущем пользователе
+func meHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Получаем claims из контекста (они были установлены в middleware)
+		claimsInterface, exists := c.Get("claims")
+		if !exists {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "claims not found in context",
+			})
+			return
+		}
+
+		claims, ok := claimsInterface.(*Claims)
+		if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "invalid claims type",
+			})
+			return
+		}
+
+		// Формируем ответ с информацией о пользователе
+		response := UserInfoResponse{
+			UserID:    claims.UserID,
+			ExpiresAt: claims.ExpiresAt.Unix(),
+			IssuedAt:  claims.IssuedAt.Unix(),
+			Issuer:    claims.Issuer,
+		}
+
+		c.JSON(http.StatusOK, response)
+	}
 }
 
 // generateJWTHandler обработчик для генерации JWT токена

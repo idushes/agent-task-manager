@@ -21,6 +21,9 @@ func main() {
 	router.GET("/ready", readyHandler)
 	router.GET("/generate-jwt", generateJWTHandler(config))
 
+	// Защищенные роуты с JWT аутентификацией
+	router.GET("/me", jwtAuthMiddleware(config), meHandler())
+
 	// Создаем HTTP сервер
 	srv := &http.Server{
 		Addr:    ":" + config.Port,
