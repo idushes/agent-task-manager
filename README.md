@@ -2,17 +2,66 @@
 
 A simple Go service with health check endpoints for Kubernetes.
 
+## Quick Start with Makefile
+
+This project includes a comprehensive Makefile for easy development and deployment:
+
+```bash
+# Show all available commands
+make help
+
+# Run locally for development
+make run
+
+# Build and test locally
+make quick-build
+
+# Build multi-platform image and push to Docker Hub
+make DOCKER_USERNAME=yourusername build-and-push
+
+# Full release with formatting, vetting, building and pushing
+make DOCKER_USERNAME=yourusername release
+```
+
 ## Installation and Setup
 
 ```bash
 # Install dependencies
 go mod download
+# or
+make deps
 
 # Run the service
 go run .
+# or 
+make run
 ```
 
 The service will start on port 8081.
+
+## Docker & Kubernetes Deployment
+
+### Using Makefile (Recommended)
+
+```bash
+# 1. Build and push multi-platform Docker image
+make DOCKER_USERNAME=yourusername build-and-push
+
+# 2. Update your Kubernetes manifests with your image name
+# 3. Deploy to Kubernetes
+kubectl apply -f your-k8s-manifests.yaml
+```
+
+### Manual Docker Commands
+
+```bash
+# Build multi-platform image
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t yourusername/agent-task-manager:latest --push .
+
+# Test locally
+docker run -p 8081:8081 yourusername/agent-task-manager:latest
+```
 
 ## API Endpoints
 
@@ -57,7 +106,7 @@ spec:
     spec:
       containers:
       - name: agent-task-manager
-        image: agent-task-manager:latest
+        image: yourusername/agent-task-manager:latest  # Update with your Docker Hub username
         ports:
         - containerPort: 8081
         livenessProbe:
@@ -74,23 +123,32 @@ spec:
           periodSeconds: 5
 ```
 
-## Docker Build
+## Available Makefile Commands
 
-```dockerfile
-FROM golang:1.24.3-alpine AS builder
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN go build -o agent-task-manager .
+### Development
+- `make run` - Run application locally
+- `make dev` - Run in development mode
+- `make deps` - Download Go dependencies
+- `make fmt` - Format Go code
+- `make vet` - Run Go vet
+- `make tidy` - Tidy Go modules
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /app/agent-task-manager .
-EXPOSE 8081
-CMD ["./agent-task-manager"]
-```
+### Docker
+- `make build` - Build Docker image for current platform
+- `make build-multi` - Build multi-platform Docker image
+- `make test-local` - Build and test image locally
+- `make push` - Push image to Docker Hub
+- `make build-and-push` - Build multi-platform and push to Docker Hub
+
+### Utilities
+- `make clean` - Clean up Docker images and containers
+- `make inspect-image` - Inspect multi-platform image details
+- `make release` - Full release process (format + vet + build + push)
+
+## Environment Variables
+
+- `DOCKER_USERNAME` - Your Docker Hub username
+- `TAG` - Image tag (default: latest)
 
 ## Testing the Service
 
@@ -100,6 +158,9 @@ curl http://localhost:8081/health
 
 # Test ready endpoint
 curl http://localhost:8081/ready
+
+# Or use Makefile for complete testing
+make test-local
 ```
 
 ## Project Structure
@@ -107,4 +168,5 @@ curl http://localhost:8081/ready
 - `main.go` - Main application file with Gin router setup
 - `health.go` - Health check handlers for Kubernetes probes
 - `Dockerfile` - Multi-stage Docker build configuration
+- `Makefile` - Build automation and deployment commands
 - `go.mod` / `go.sum` - Go module dependencies 
