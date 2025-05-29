@@ -19,6 +19,7 @@ func main() {
 
 	router.GET("/health", healthHandler)
 	router.GET("/ready", readyHandler)
+	router.GET("/generate-jwt", generateJWTHandler(config))
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
