@@ -13,8 +13,17 @@ import (
 )
 
 func main() {
-	// Создаем новый роутер Gin
-	router := gin.Default()
+	// Создаем новый роутер Gin без дефолтного middleware
+	router := gin.New()
+
+	// Добавляем Recovery middleware
+	router.Use(gin.Recovery())
+
+	// Добавляем кастомный Logger middleware, исключающий health-check пути
+	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
+		SkipPaths: []string{"/health", "/ready"},
+	}))
+
 	config := LoadConfig()
 
 	router.GET("/health", healthHandler)
