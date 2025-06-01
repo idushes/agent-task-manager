@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -13,7 +14,7 @@ type Config struct {
 }
 
 // LoadConfig загружает конфигурацию из переменных окружения
-func LoadConfig() *Config {
+func LoadConfig() (*Config, error) {
 	config := &Config{
 		Port:        getEnvOrDefault("PORT", "8081"),
 		SecretKey:   getEnvOrDefault("SECRET_KEY", ""),
@@ -21,7 +22,12 @@ func LoadConfig() *Config {
 		RedisURL:    getEnvOrDefault("REDIS_URL", ""),
 	}
 
-	return config
+	// Проверяем обязательные параметры
+	if config.SecretKey == "" {
+		return nil, fmt.Errorf("SECRET_KEY environment variable is required")
+	}
+
+	return config, nil
 }
 
 // getEnvOrDefault возвращает значение переменной окружения или значение по умолчанию

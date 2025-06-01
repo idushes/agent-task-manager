@@ -145,14 +145,6 @@ func generateJWTHandler(config *Config) gin.HandlerFunc {
 			return
 		}
 
-		// Проверяем что SecretKey в конфиге не пустой
-		if config.SecretKey == "" {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "server secret key is not configured",
-			})
-			return
-		}
-
 		// Получаем параметр expires_in (в часах), по умолчанию год (8760 часов)
 		expiresInStr := c.DefaultQuery("expires_in", "8760") // 365 дней * 24 часа = 8760 часов
 		expiresInHours, err := strconv.Atoi(expiresInStr)

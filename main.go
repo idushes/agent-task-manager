@@ -24,7 +24,10 @@ func main() {
 		SkipPaths: []string{"/health", "/ready"},
 	}))
 
-	config := LoadConfig()
+	config, err := LoadConfig()
+	if err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
 
 	router.GET("/health", healthHandler)
 	router.GET("/ready", readyHandler)
