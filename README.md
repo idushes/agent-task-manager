@@ -145,8 +145,52 @@ spec:
 - `make inspect-image` - Inspect multi-platform image details
 - `make release` - Full release process (format + vet + build + push)
 
+## Configuration
+
+The application supports configuration through environment variables or a `.env` file. Environment variables take precedence over `.env` file values.
+
+### Using .env file
+
+1. Copy the example configuration:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` file with your values:
+   ```bash
+   # Required
+   SECRET_KEY=your-secure-secret-key-here
+   
+   # Optional
+   PORT=8081
+   POSTGRES_URL=postgres://user:password@localhost:5432/dbname?sslmode=disable
+   REDIS_URL=redis://localhost:6379
+   ```
+
+3. Run the application:
+   ```bash
+   go run .
+   ```
+
+### Configuration Priority
+
+1. Environment variables (highest priority)
+2. `.env` file values
+3. Default values (lowest priority)
+
+### Required Configuration
+
+- `SECRET_KEY` - **Required** for JWT token signing. Application will not start without it.
+
 ## Environment Variables
 
+### Application Configuration
+- `SECRET_KEY` - **Required** - Secret key for JWT token signing
+- `PORT` - Port to run the server on (default: 8081)
+- `POSTGRES_URL` - PostgreSQL connection URL (optional)
+- `REDIS_URL` - Redis connection URL (optional)
+
+### Build/Deployment Configuration
 - `DOCKER_USERNAME` - Your Docker Hub username
 - `TAG` - Image tag (default: latest)
 

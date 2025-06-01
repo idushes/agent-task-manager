@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
+
+	"github.com/joho/godotenv"
 )
 
 // Config структура для хранения конфигурации приложения
@@ -15,6 +18,13 @@ type Config struct {
 
 // LoadConfig загружает конфигурацию из переменных окружения
 func LoadConfig() (*Config, error) {
+	// Пытаемся загрузить .env файл, игнорируем ошибку если файл не найден
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, using environment variables only")
+	} else {
+		log.Println(".env file loaded successfully")
+	}
+
 	config := &Config{
 		Port:        getEnvOrDefault("PORT", "8081"),
 		SecretKey:   getEnvOrDefault("SECRET_KEY", ""),
