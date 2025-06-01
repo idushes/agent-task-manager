@@ -18,11 +18,19 @@ type Config struct {
 
 // LoadConfig загружает конфигурацию из переменных окружения
 func LoadConfig() (*Config, error) {
-	// Пытаемся загрузить .env файл, игнорируем ошибку если файл не найден
-	if err := godotenv.Load(); err != nil {
+	// Проверяем, существует ли файл .env
+	if _, err := os.Stat(".env"); err == nil {
+		// Файл существует, пытаемся его загрузить
+		if errLoad := godotenv.Load(".env"); errLoad != nil {
+			log.Printf("Warning: error loading .env file: %s", errLoad)
+		} else {
+			log.Println(".env file loaded successfully")
+		}
+	} else if os.IsNotExist(err) {
 		log.Println("No .env file found, using environment variables only")
 	} else {
-		log.Println(".env file loaded successfully")
+		// Другая ошибка при проверке файла .env (например, нет прав доступа)
+		log.Printf("Warning: error checking .env file: %s", err)
 	}
 
 	config := &Config{

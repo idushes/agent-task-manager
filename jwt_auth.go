@@ -21,8 +21,6 @@ type JWTResponse struct {
 type UserInfoResponse struct {
 	UserID    string `json:"user_id"`
 	ExpiresAt int64  `json:"expires_at"`
-	IssuedAt  int64  `json:"issued_at"`
-	Issuer    string `json:"issuer"`
 }
 
 // Claims структура для JWT claims
@@ -115,8 +113,6 @@ func meHandler() gin.HandlerFunc {
 		response := UserInfoResponse{
 			UserID:    claims.UserID,
 			ExpiresAt: claims.ExpiresAt.Unix(),
-			IssuedAt:  claims.IssuedAt.Unix(),
-			Issuer:    claims.Issuer,
 		}
 
 		c.JSON(http.StatusOK, response)
@@ -172,10 +168,6 @@ func generateJWTHandler(config *Config) gin.HandlerFunc {
 			UserID: userID,
 			RegisteredClaims: jwt.RegisteredClaims{
 				ExpiresAt: jwt.NewNumericDate(expirationTime),
-				IssuedAt:  jwt.NewNumericDate(time.Now()),
-				NotBefore: jwt.NewNumericDate(time.Now()),
-				Issuer:    "agent-task-manager",
-				Subject:   userID,
 			},
 		}
 
