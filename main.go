@@ -1,6 +1,7 @@
 package main
 
 import (
+	"agent-task-manager/database"
 	"context"
 	"log"
 	"net/http"
@@ -27,6 +28,11 @@ func main() {
 	config, err := LoadConfig()
 	if err != nil {
 		log.Fatal("Failed to load config:", err)
+	}
+
+	// Инициализируем подключение к базе данных
+	if err := database.InitDB(config.PostgresURL); err != nil {
+		log.Fatal("Failed to initialize database:", err)
 	}
 
 	router.GET("/health", healthHandler)
@@ -65,6 +71,13 @@ func main() {
 	// Корректно завершаем сервер
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	// Закрываем соединение с базой данных
+	if err := database.CloseDB(); err != nil {
+		log.Printf("Error closing database connection: %v", err)
+	} else {
+		log.Println("Database connection closed")
 	}
 
 	log.Println("Server exited")

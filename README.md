@@ -1,6 +1,6 @@
 # Agent Task Manager
 
-A simple Go service with health check endpoints for Kubernetes.
+A Go service with health check endpoints for Kubernetes. Built with Gin framework and GORM ORM for task data modeling.
 
 ## Quick Start with Makefile
 
@@ -181,13 +181,20 @@ The application supports configuration through environment variables or a `.env`
 ### Required Configuration
 
 - `SECRET_KEY` - **Required** for JWT token signing. Application will not start without it.
+- `POSTGRES_URL` - **Required** for database connection. Application will not start without it.
+
+### Database Configuration
+
+The application requires PostgreSQL:
+- `POSTGRES_URL` is required for database connection
+- Database tables are automatically migrated on startup
 
 ## Environment Variables
 
 ### Application Configuration
 - `SECRET_KEY` - **Required** - Secret key for JWT token signing
+- `POSTGRES_URL` - **Required** - PostgreSQL connection URL
 - `PORT` - Port to run the server on (default: 8081)
-- `POSTGRES_URL` - PostgreSQL connection URL (optional)
 - `REDIS_URL` - Redis connection URL (optional)
 
 ### Build/Deployment Configuration
@@ -211,6 +218,10 @@ make test-local
 
 - `main.go` - Main application file with Gin router setup
 - `health.go` - Health check handlers for Kubernetes probes
+- `config.go` - Configuration management
+- `jwt_auth.go` - JWT authentication middleware
+- `models/task.go` - Task model with GORM definitions (supports cascade deletion)
+- `database/database.go` - Database connection and initialization
 - `Dockerfile` - Multi-stage Docker build configuration
 - `Makefile` - Build automation and deployment commands
 - `go.mod` / `go.sum` - Go module dependencies 
