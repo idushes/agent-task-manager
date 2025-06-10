@@ -1,6 +1,7 @@
-package main
+package handlers
 
 import (
+	"agent-task-manager/config"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,8 +30,8 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// jwtAuthMiddleware middleware для проверки JWT токена
-func jwtAuthMiddleware(config *Config) gin.HandlerFunc {
+// JwtAuthMiddleware middleware для проверки JWT токена
+func JwtAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем токен из заголовка Authorization
 		authHeader := c.GetHeader("Authorization")
@@ -60,7 +61,7 @@ func jwtAuthMiddleware(config *Config) gin.HandlerFunc {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return []byte(config.SecretKey), nil
+			return []byte(cfg.SecretKey), nil
 		})
 
 		if err != nil {
@@ -89,8 +90,8 @@ func jwtAuthMiddleware(config *Config) gin.HandlerFunc {
 	}
 }
 
-// meHandler обработчик для получения информации о текущем пользователе
-func meHandler() gin.HandlerFunc {
+// MeHandler обработчик для получения информации о текущем пользователе
+func MeHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем claims из контекста (они были установлены в middleware)
 		claimsInterface, exists := c.Get("claims")
@@ -119,8 +120,8 @@ func meHandler() gin.HandlerFunc {
 	}
 }
 
-// generateJWTHandler обработчик для генерации JWT токена
-func generateJWTHandler(config *Config) gin.HandlerFunc {
+// GenerateJWTHandler обработчик для генерации JWT токена
+func GenerateJWTHandler(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем secret из query параметра
 		secretParam := c.Query("secret")
@@ -134,7 +135,7 @@ func generateJWTHandler(config *Config) gin.HandlerFunc {
 		}
 
 		// Проверяем что secret совпадает с секретом из конфига
-		if secretParam != config.SecretKey {
+		if secretParam != cfg.SecretKey {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid secret",
 			})
@@ -175,7 +176,7 @@ func generateJWTHandler(config *Config) gin.HandlerFunc {
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 		// Подписываем токен секретным ключом
-		tokenString, err := token.SignedString([]byte(config.SecretKey))
+		tokenString, err := token.SignedString([]byte(cfg.SecretKey))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to generate token",

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"agent-task-manager/database"
 	"context"
 	"log"
 	"net/http"
@@ -9,6 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"agent-task-manager/config"
+	"agent-task-manager/database"
+	"agent-task-manager/handlers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,32 +28,32 @@ func main() {
 		SkipPaths: []string{"/health", "/ready"},
 	}))
 
-	config, err := LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal("Failed to load config:", err)
 	}
 
 	// Инициализируем подключение к базе данных
-	if err := database.InitDB(config.PostgresURL); err != nil {
+	if err := database.InitDB(cfg.PostgresURL); err != nil {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
-	router.GET("/health", healthHandler)
-	router.GET("/ready", readyHandler)
-	router.GET("/generate-jwt", generateJWTHandler(config))
+	router.GET("/health", handlers.HealthHandler)
+	router.GET("/ready", handlers.ReadyHandler)
+	router.GET("/generate-jwt", handlers.GenerateJWTHandler(cfg))
 
 	// Защищенные роуты с JWT аутентификацией
-	router.GET("/me", jwtAuthMiddleware(config), meHandler())
+	router.GET("/me", handlers.JwtAuthMiddleware(cfg), handlers.MeHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
-		Addr:    ":" + config.Port,
+		Addr:    ":" + cfg.Port,
 		Handler: router,
 	}
 
 	// Запускаем сервер в горутине
 	go func() {
-		log.Println("Starting server on :" + config.Port)
+		log.Println("Starting server on :" + cfg.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal("Failed to start server:", err)
 		}

@@ -217,9 +217,9 @@ make test-local
 ## Project Structure
 
 - `main.go` - Main application file with Gin router setup
-- `health.go` - Health check handlers for Kubernetes probes
-- `config.go` - Configuration management
-- `jwt_auth.go` - JWT authentication middleware
+- `config/config.go` - Configuration management
+- `handlers/health.go` - Health check handlers for Kubernetes probes
+- `handlers/jwt_auth.go` - JWT authentication middleware and handlers
 - `models/task.go` - Task model with GORM definitions (supports cascade deletion)
 - `database/database.go` - Database connection and initialization
 - `Dockerfile` - Multi-stage Docker build configuration

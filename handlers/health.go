@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"net/http"
@@ -6,17 +6,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-
-// healthHandler обрабатывает запросы на проверку жизнеспособности сервиса
-func healthHandler(c *gin.Context) {
+// HealthHandler обрабатывает запросы на проверку жизнеспособности сервиса
+func HealthHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "alive",
 		"message": "Service is running",
 	})
 }
 
-// readyHandler обрабатывает запросы на проверку готовности сервиса
-func readyHandler(c *gin.Context) {
+// ReadyHandler обрабатывает запросы на проверку готовности сервиса
+func ReadyHandler(c *gin.Context) {
 	// Здесь можно добавить проверки подключения к БД, внешним сервисам и т.д.
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ready",
