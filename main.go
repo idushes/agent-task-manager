@@ -14,12 +14,35 @@ import (
 	"agent-task-manager/handlers"
 	"agent-task-manager/handlers/tasks"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
 	// Создаем новый роутер Gin без дефолтного middleware
 	router := gin.New()
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal("Failed to load config:", err)
+	}
+
+	// Настраиваем CORS
+	corsConfig := cors.Config{
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "X-Requested-With"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false, // По умолчанию false
+		MaxAge:           12 * time.Hour,
+	}
+
+	// Если указаны конкретные домены (не wildcard), разрешаем credentials
+	if len(cfg.AllowedOrigins) > 0 && cfg.AllowedOrigins[0] != "*" {
+		corsConfig.AllowCredentials = true
+	}
+
+	router.Use(cors.New(corsConfig))
 
 	// Добавляем Recovery middleware
 	router.Use(gin.Recovery())
@@ -28,11 +51,6 @@ func main() {
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
 		SkipPaths: []string{"/health", "/ready"},
 	}))
-
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatal("Failed to load config:", err)
-	}
 
 	// Инициализируем подключение к базе данных
 	if err := database.InitDB(cfg.PostgresURL); err != nil {

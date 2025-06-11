@@ -4,16 +4,18 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 // Config структура для хранения конфигурации приложения
 type Config struct {
-	Port        string
-	SecretKey   string
-	PostgresURL string
-	RedisURL    string
+	Port           string
+	SecretKey      string
+	PostgresURL    string
+	RedisURL       string
+	AllowedOrigins []string
 }
 
 // LoadConfig загружает конфигурацию из переменных окружения
@@ -38,6 +40,19 @@ func LoadConfig() (*Config, error) {
 		SecretKey:   getEnvOrDefault("SECRET_KEY", ""),
 		PostgresURL: getEnvOrDefault("POSTGRES_URL", ""),
 		RedisURL:    getEnvOrDefault("REDIS_URL", ""),
+	}
+
+	// Загружаем список разрешенных доменов
+	allowedOriginsStr := getEnvOrDefault("ALLOWED_ORIGINS", "*")
+	if allowedOriginsStr == "*" {
+		config.AllowedOrigins = []string{"*"}
+	} else {
+		// Разделяем строку по запятым и удаляем пробелы
+		origins := strings.Split(allowedOriginsStr, ",")
+		for i, origin := range origins {
+			origins[i] = strings.TrimSpace(origin)
+		}
+		config.AllowedOrigins = origins
 	}
 
 	// Проверяем обязательные параметры
