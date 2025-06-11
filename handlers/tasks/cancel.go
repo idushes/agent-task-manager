@@ -10,44 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// CancelSubtasksRecursive рекурсивно отменяет все активные подзадачи
-func CancelSubtasksRecursive(tx *gorm.DB, parentID uuid.UUID) error {
-	// Получаем все подзадачи, которые нужно отменить
-	var subtasks []models.Task
-	if err := tx.Where("parent_task_id = ? AND status IN ?", parentID, []models.TaskStatus{
-		models.StatusSubmitted,
-		models.StatusWorking,
-		models.StatusWaiting,
-	}).Find(&subtasks).Error; err != nil {
-		return err
-	}
-
-	// Отменяем найденные подзадачи
-	if len(subtasks) > 0 {
-		subtaskIDs := make([]uuid.UUID, len(subtasks))
-		for i, subtask := range subtasks {
-			subtaskIDs[i] = subtask.ID
-		}
-
-		if err := tx.Model(&models.Task{}).
-			Where("id IN ?", subtaskIDs).
-			Update("status", models.StatusCanceled).Error; err != nil {
-			return err
-		}
-
-		// Рекурсивно отменяем подзадачи каждой подзадачи
-		for _, subtask := range subtasks {
-			if err := CancelSubtasksRecursive(tx, subtask.ID); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// CompleteTaskHandler обработчик для завершения задачи
-func CompleteTaskHandler() gin.HandlerFunc {
+// CancelTaskHandler обработчик для отмены задачи
+func CancelTaskHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем user_id из контекста (установлен в JWT middleware)
 		userID, exists := c.Get("user_id")
@@ -64,14 +28,6 @@ func CompleteTaskHandler() gin.HandlerFunc {
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "invalid task id format",
-			})
-			return
-		}
-
-		var req CompleteTaskRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "invalid request body: " + err.Error(),
 			})
 			return
 		}
@@ -103,31 +59,27 @@ func CompleteTaskHandler() gin.HandlerFunc {
 			return
 		}
 
-		// Проверяем, что пользователь является исполнителем задачи
-		if task.Assignee != userID.(string) {
+		// Проверяем, что пользователь является исполнителем задачи или создателем
+		if task.Assignee != userID.(string) && task.CreatedBy != userID.(string) {
 			tx.Rollback()
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "only assignee can complete the task",
+				"error": "only assignee or creator can cancel the task",
 			})
 			return
 		}
 
-		// Проверяем текущий статус задачи
-		if task.Status != models.StatusWorking {
+		// Проверяем текущий статус задачи - нельзя отменить уже завершенную или отмененную задачу
+		if task.Status == models.StatusCompleted || task.Status == models.StatusCanceled || task.Status == models.StatusFailed {
 			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error":          "task must be in working status to complete",
+				"error":          "cannot cancel task with status: " + string(task.Status),
 				"current_status": task.Status,
 			})
 			return
 		}
 
 		// Обновляем задачу
-		task.Status = models.StatusCompleted
-		task.Result = req.Description
-		if req.DeleteAt != nil {
-			task.DeleteAt = req.DeleteAt
-		}
+		task.Status = models.StatusCanceled
 
 		if err := tx.Save(&task).Error; err != nil {
 			tx.Rollback()
