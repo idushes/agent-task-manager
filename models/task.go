@@ -20,6 +20,7 @@ const (
 	StatusSubmitted     TaskStatus = "submitted"
 	StatusRejected      TaskStatus = "rejected"
 	StatusWorking       TaskStatus = "working"
+	StatusWaiting       TaskStatus = "waiting"
 	StatusInputRequired TaskStatus = "input-required"
 	StatusUnknown       TaskStatus = "unknown"
 )

@@ -1,4 +1,4 @@
-package handlers
+package tasks
 
 import (
 	"agent-task-manager/database"
@@ -8,17 +8,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
-
-// CreateTaskRequest структура для запроса создания задачи
-type CreateTaskRequest struct {
-	Description  string          `json:"description" binding:"required"`
-	Assignee     string          `json:"assignee"`
-	ParentTaskID *uuid.UUID      `json:"parent_task_id"`
-	DeleteAt     *time.Time      `json:"delete_at"`
-	Credentials  json.RawMessage `json:"credentials"`
-}
 
 // CreateTaskHandler обработчик для создания новой задачи
 func CreateTaskHandler() gin.HandlerFunc {
@@ -45,8 +35,8 @@ func CreateTaskHandler() gin.HandlerFunc {
 		if req.Credentials != nil && len(req.Credentials) > 0 {
 			// Проверяем структуру credentials
 			// Ожидаемая структура: { "service": { "ENV_VAR": "value" } }
-			var credsMap map[string]map[string]string
-			if err := json.Unmarshal(req.Credentials, &credsMap); err != nil {
+			credsMap, err := validateCredentials(req.Credentials)
+			if err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{
 					"error": "invalid credentials format: " + err.Error(),
 				})
@@ -117,6 +107,15 @@ func CreateTaskHandler() gin.HandlerFunc {
 				return
 			}
 
+			// Проверяем, что parent задача находится в разрешенном статусе
+			if !isParentStatusAllowed(parentTask.Status) {
+				c.JSON(http.StatusBadRequest, gin.H{
+					"error":         "parent task must be in waiting, working or submitted status",
+					"parent_status": parentTask.Status,
+				})
+				return
+			}
+
 			// Устанавливаем RootTaskID из родительской задачи
 			task.RootTaskID = parentTask.RootTaskID
 			// Если у родительской задачи нет RootTaskID, используем ID родительской задачи
@@ -139,6 +138,16 @@ func CreateTaskHandler() gin.HandlerFunc {
 			if err := db.Save(&task).Error; err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"error": "failed to update root task id: " + err.Error(),
+				})
+				return
+			}
+		} else {
+			// Если есть parent, переводим его в статус waiting
+			if err := db.Model(&models.Task{}).
+				Where("id = ?", req.ParentTaskID).
+				Update("status", models.StatusWaiting).Error; err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{
+					"error": "failed to update parent task status: " + err.Error(),
 				})
 				return
 			}

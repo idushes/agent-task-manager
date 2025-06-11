@@ -1,0 +1,17 @@
+package tasks
+
+import (
+	"encoding/json"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// CreateTaskRequest структура для запроса создания задачи
+type CreateTaskRequest struct {
+	Description  string          `json:"description" binding:"required"`
+	Assignee     string          `json:"assignee"`
+	ParentTaskID *uuid.UUID      `json:"parent_task_id"`
+	DeleteAt     *time.Time      `json:"delete_at"`
+	Credentials  json.RawMessage `json:"credentials"`
+}

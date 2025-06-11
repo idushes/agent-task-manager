@@ -12,6 +12,7 @@ import (
 	"agent-task-manager/config"
 	"agent-task-manager/database"
 	"agent-task-manager/handlers"
+	"agent-task-manager/handlers/tasks"
 
 	"github.com/gin-gonic/gin"
 )
@@ -44,7 +45,8 @@ func main() {
 
 	// Защищенные роуты с JWT аутентификацией
 	router.GET("/me", handlers.JwtAuthMiddleware(cfg), handlers.MeHandler())
-	router.POST("/task", handlers.JwtAuthMiddleware(cfg), handlers.CreateTaskHandler())
+	router.POST("/task", handlers.JwtAuthMiddleware(cfg), tasks.CreateTaskHandler())
+	router.GET("/task", handlers.JwtAuthMiddleware(cfg), tasks.GetTaskHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
