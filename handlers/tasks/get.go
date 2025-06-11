@@ -64,6 +64,17 @@ func GetTaskHandler() gin.HandlerFunc {
 			return
 		}
 
+		// Загружаем завершенные подзадачи первого уровня
+		var completedSubtasks []models.Task
+		if err := tx.Where("parent_task_id = ? AND status = ?", task.ID, models.StatusCompleted).
+			Find(&completedSubtasks).Error; err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to load completed subtasks: " + err.Error(),
+			})
+			return
+		}
+
 		// Коммитим транзакцию
 		if err := tx.Commit().Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -72,6 +83,12 @@ func GetTaskHandler() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, task)
+		// Формируем ответ с подзадачами
+		response := TaskWithSubtasks{
+			Task:              task,
+			CompletedSubtasks: completedSubtasks,
+		}
+
+		c.JSON(http.StatusOK, response)
 	}
 }

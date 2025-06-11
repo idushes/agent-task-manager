@@ -161,9 +161,18 @@ func InfoHandler() gin.HandlerFunc {
 						Description: "Получение задачи в работу (берется первая доступная задача где assignee = текущий пользователь и status = submitted)",
 						Auth:        true,
 						Response: map[string]interface{}{
-							"id":     "123e4567-e89b-12d3-a456-426614174000",
-							"status": "working",
-							"_note":  "Статус автоматически меняется на 'working'",
+							"id":          "123e4567-e89b-12d3-a456-426614174000",
+							"status":      "working",
+							"description": "Проанализировать данные",
+							"_note":       "Статус автоматически меняется на 'working'",
+							"completed_subtasks": []map[string]interface{}{
+								{
+									"id":          "456e7890-e89b-12d3-a456-426614174001",
+									"description": "Подзадача 1",
+									"status":      "completed",
+									"result":      "Подзадача выполнена успешно",
+								},
+							},
 						},
 						Errors: []ErrorInfo{
 							{Code: 404, Description: "Нет доступных задач для данного пользователя"},
@@ -274,6 +283,7 @@ func InfoHandler() gin.HandlerFunc {
 						"6. Assignee или создатель задачи может отменить задачу",
 						"7. Задачи автоматически удаляются через 3 месяца (можно изменить при создании)",
 						"8. Каждая задача имеет root_task_id для отслеживания иерархии",
+						"9. При получении задачи (GET /task) в ответ включаются завершенные подзадачи первого уровня",
 					},
 				},
 			},

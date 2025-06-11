@@ -1,6 +1,7 @@
 package tasks
 
 import (
+	"agent-task-manager/models"
 	"encoding/json"
 	"time"
 
@@ -25,4 +26,10 @@ type CompleteTaskRequest struct {
 // FailTaskRequest структура для запроса неудачного завершения задачи
 type FailTaskRequest struct {
 	Reason string `json:"reason" binding:"required"`
+}
+
+// TaskWithSubtasks структура для ответа с задачей и её завершенными подзадачами
+type TaskWithSubtasks struct {
+	models.Task
+	CompletedSubtasks []models.Task `json:"completed_subtasks,omitempty"`
 }
