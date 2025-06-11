@@ -21,3 +21,8 @@ type CompleteTaskRequest struct {
 	Description string     `json:"description" binding:"required"`
 	DeleteAt    *time.Time `json:"delete_at"`
 }
+
+// FailTaskRequest структура для запроса неудачного завершения задачи
+type FailTaskRequest struct {
+	Reason string `json:"reason" binding:"required"`
+}

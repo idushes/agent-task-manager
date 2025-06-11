@@ -10,8 +10,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// CompleteTaskHandler обработчик для завершения задачи
-func CompleteTaskHandler() gin.HandlerFunc {
+// FailTaskHandler обработчик для пометки задачи как неудачной
+func FailTaskHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем user_id из контекста (установлен в JWT middleware)
 		userID, exists := c.Get("user_id")
@@ -32,7 +32,7 @@ func CompleteTaskHandler() gin.HandlerFunc {
 			return
 		}
 
-		var req CompleteTaskRequest
+		var req FailTaskRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "invalid request body: " + err.Error(),
@@ -71,7 +71,7 @@ func CompleteTaskHandler() gin.HandlerFunc {
 		if task.Assignee != userID.(string) {
 			tx.Rollback()
 			c.JSON(http.StatusForbidden, gin.H{
-				"error": "only assignee can complete the task",
+				"error": "only assignee can fail the task",
 			})
 			return
 		}
@@ -80,18 +80,15 @@ func CompleteTaskHandler() gin.HandlerFunc {
 		if task.Status != models.StatusWorking {
 			tx.Rollback()
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error":          "task must be in working status to complete",
+				"error":          "task must be in working status to fail",
 				"current_status": task.Status,
 			})
 			return
 		}
 
 		// Обновляем задачу
-		task.Status = models.StatusCompleted
-		task.Result = req.Description
-		if req.DeleteAt != nil {
-			task.DeleteAt = req.DeleteAt
-		}
+		task.Status = models.StatusFailed
+		task.Result = "FAILURE REASON: " + req.Reason
 
 		if err := tx.Save(&task).Error; err != nil {
 			tx.Rollback()
@@ -101,28 +98,7 @@ func CompleteTaskHandler() gin.HandlerFunc {
 			return
 		}
 
-		// Если у задачи есть родитель, проверяем все задачи с таким же parent
-		if task.ParentTaskID != nil {
-			// Подсчитываем задачи с таким же parent
-			var totalCount int64
-			var completedOrCanceledCount int64
-
-			tx.Model(&models.Task{}).Where("parent_task_id = ?", task.ParentTaskID).Count(&totalCount)
-			tx.Model(&models.Task{}).Where("parent_task_id = ? AND status IN ?", task.ParentTaskID, []models.TaskStatus{models.StatusCompleted, models.StatusCanceled}).Count(&completedOrCanceledCount)
-
-			// Если все подзадачи завершены или отменены, обновляем статус родительской задачи
-			if totalCount > 0 && totalCount == completedOrCanceledCount {
-				if err := tx.Model(&models.Task{}).
-					Where("id = ?", task.ParentTaskID).
-					Update("status", models.StatusSubmitted).Error; err != nil {
-					tx.Rollback()
-					c.JSON(http.StatusInternalServerError, gin.H{
-						"error": "failed to update parent task status: " + err.Error(),
-					})
-					return
-				}
-			}
-		}
+		// В отличие от complete, при fail родительская задача остается в статусе waiting
 
 		// Коммитим транзакцию
 		if err := tx.Commit().Error; err != nil {
