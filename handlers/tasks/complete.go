@@ -10,6 +10,42 @@ import (
 	"gorm.io/gorm"
 )
 
+// cancelSubtasksRecursive рекурсивно отменяет все активные подзадачи
+func cancelSubtasksRecursive(tx *gorm.DB, parentID uuid.UUID) error {
+	// Получаем все подзадачи, которые нужно отменить
+	var subtasks []models.Task
+	if err := tx.Where("parent_task_id = ? AND status IN ?", parentID, []models.TaskStatus{
+		models.StatusSubmitted,
+		models.StatusWorking,
+		models.StatusWaiting,
+	}).Find(&subtasks).Error; err != nil {
+		return err
+	}
+
+	// Отменяем найденные подзадачи
+	if len(subtasks) > 0 {
+		subtaskIDs := make([]uuid.UUID, len(subtasks))
+		for i, subtask := range subtasks {
+			subtaskIDs[i] = subtask.ID
+		}
+
+		if err := tx.Model(&models.Task{}).
+			Where("id IN ?", subtaskIDs).
+			Update("status", models.StatusCanceled).Error; err != nil {
+			return err
+		}
+
+		// Рекурсивно отменяем подзадачи каждой подзадачи
+		for _, subtask := range subtasks {
+			if err := cancelSubtasksRecursive(tx, subtask.ID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // CompleteTaskHandler обработчик для завершения задачи
 func CompleteTaskHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -97,6 +133,15 @@ func CompleteTaskHandler() gin.HandlerFunc {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": "failed to update task: " + err.Error(),
+			})
+			return
+		}
+
+		// Рекурсивно отменяем все активные подзадачи этой задачи
+		if err := cancelSubtasksRecursive(tx, task.ID); err != nil {
+			tx.Rollback()
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to cancel subtasks: " + err.Error(),
 			})
 			return
 		}
