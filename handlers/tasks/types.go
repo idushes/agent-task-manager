@@ -15,3 +15,9 @@ type CreateTaskRequest struct {
 	DeleteAt     *time.Time      `json:"delete_at"`
 	Credentials  json.RawMessage `json:"credentials"`
 }
+
+// CompleteTaskRequest структура для запроса завершения задачи
+type CompleteTaskRequest struct {
+	Description string     `json:"description" binding:"required"`
+	DeleteAt    *time.Time `json:"delete_at"`
+}

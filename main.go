@@ -47,6 +47,7 @@ func main() {
 	router.GET("/me", handlers.JwtAuthMiddleware(cfg), handlers.MeHandler())
 	router.POST("/task", handlers.JwtAuthMiddleware(cfg), tasks.CreateTaskHandler())
 	router.GET("/task", handlers.JwtAuthMiddleware(cfg), tasks.GetTaskHandler())
+	router.POST("/task/:id/complete", handlers.JwtAuthMiddleware(cfg), tasks.CompleteTaskHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
