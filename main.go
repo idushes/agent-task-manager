@@ -44,6 +44,7 @@ func main() {
 
 	// Защищенные роуты с JWT аутентификацией
 	router.GET("/me", handlers.JwtAuthMiddleware(cfg), handlers.MeHandler())
+	router.POST("/task", handlers.JwtAuthMiddleware(cfg), handlers.CreateTaskHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
