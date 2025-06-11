@@ -268,6 +268,38 @@ All task endpoints require JWT authentication via `Authorization: Bearer {token}
   - Sets result to "FAILURE REASON: {reason}"
   - Parent task remains in "waiting" status
 
+#### Get Root Tasks
+- **GET** `/root-task/:id/tasks` - Get all tasks by root_task_id
+  - Returns flat list of all tasks with specified root_task_id
+  - Access control: Only the creator of the root task can access this endpoint
+  - Credentials field is excluded from the response
+  ```json
+  [
+    {
+      "id": "123e4567-e89b-12d3-a456-426614174000",
+      "created_at": "2024-01-20T10:30:00Z",
+      "created_by": "user123",
+      "assignee": "agent1",
+      "description": "Main task",
+      "root_task_id": "123e4567-e89b-12d3-a456-426614174000",
+      "parent_task_id": null,
+      "result": "",
+      "status": "submitted"
+    },
+    {
+      "id": "456e7890-e89b-12d3-a456-426614174001",
+      "created_at": "2024-01-20T10:35:00Z",
+      "created_by": "user123",
+      "assignee": "agent2",
+      "description": "Subtask",
+      "root_task_id": "123e4567-e89b-12d3-a456-426614174000",
+      "parent_task_id": "123e4567-e89b-12d3-a456-426614174000",
+      "result": "",
+      "status": "working"
+    }
+  ]
+  ```
+
 ## Task Lifecycle & Business Logic
 
 ### Task Statuses
@@ -290,6 +322,7 @@ All task endpoints require JWT authentication via `Authorization: Bearer {token}
 7. Tasks are automatically deleted after 3 months (configurable via `delete_at`)
 8. Each task has `root_task_id` for hierarchy tracking
 9. When getting a task (GET /task), completed first-level subtasks are included in the response
+10. Only the creator of a root task can view all tasks in its hierarchy (GET /root-task/:id/tasks)
 
 ### Task Hierarchy Example
 ```
@@ -490,6 +523,10 @@ curl -X POST http://localhost:8081/task/$SUBTASK1/complete \
   -d '{
     "description": "Schema designed with 5 tables"
   }'
+
+# 6. Manager can view all tasks in the hierarchy
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8081/root-task/$ROOT_TASK/tasks | jq
 ```
 
 ## Project Structure
@@ -504,6 +541,7 @@ curl -X POST http://localhost:8081/task/$SUBTASK1/complete \
   - `tasks/` - Task management handlers
     - `create.go` - Create task handler
     - `get.go` - Get next task handler
+    - `get_root_tasks.go` - Get all tasks by root_task_id handler
     - `complete.go` - Complete task handler
     - `cancel.go` - Cancel task handler
     - `fail.go` - Fail task handler

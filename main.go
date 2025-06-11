@@ -41,7 +41,7 @@ func main() {
 
 	router.GET("/health", handlers.HealthHandler)
 	router.GET("/ready", handlers.ReadyHandler)
-	router.GET("/info", handlers.InfoHandler())
+	router.GET("/", handlers.InfoHandler())
 	router.GET("/generate-jwt", handlers.GenerateJWTHandler(cfg))
 
 	// Защищенные роуты с JWT аутентификацией
@@ -51,6 +51,7 @@ func main() {
 	router.POST("/task/:id/complete", handlers.JwtAuthMiddleware(cfg), tasks.CompleteTaskHandler())
 	router.POST("/task/:id/cancel", handlers.JwtAuthMiddleware(cfg), tasks.CancelTaskHandler())
 	router.POST("/tasks/:id/fail", handlers.JwtAuthMiddleware(cfg), tasks.FailTaskHandler())
+	router.GET("/root-task/:id/tasks", handlers.JwtAuthMiddleware(cfg), tasks.GetRootTasksHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
