@@ -41,6 +41,7 @@ func main() {
 
 	router.GET("/health", handlers.HealthHandler)
 	router.GET("/ready", handlers.ReadyHandler)
+	router.GET("/info", handlers.InfoHandler())
 	router.GET("/generate-jwt", handlers.GenerateJWTHandler(cfg))
 
 	// Защищенные роуты с JWT аутентификацией
