@@ -21,7 +21,7 @@ func InitDB(postgresURL string) error {
 
 	// Настройки GORM
 	gormConfig := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Warn),
 	}
 
 	// Подключаемся к PostgreSQL
