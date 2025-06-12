@@ -30,4 +30,7 @@ agent-task-manager
 # OS specific files
 .DS_Store
 Thumbs.db 
+
+# Environment files
 .env
+!.env.example

@@ -3,6 +3,7 @@ package tasks
 import (
 	"agent-task-manager/database"
 	"agent-task-manager/models"
+	"agent-task-manager/redis"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -157,12 +158,29 @@ func CompleteTaskHandler() gin.HandlerFunc {
 
 			// Если все подзадачи завершены или отменены, обновляем статус родительской задачи
 			if totalCount > 0 && totalCount == completedOrCanceledCount {
-				if err := tx.Model(&models.Task{}).
-					Where("id = ?", task.ParentTaskID).
-					Update("status", models.StatusSubmitted).Error; err != nil {
+				// Получаем информацию о родительской задаче для отправки уведомления
+				var parentTask models.Task
+				if err := tx.First(&parentTask, "id = ?", task.ParentTaskID).Error; err == nil {
+					// Обновляем статус родительской задачи
+					if err := tx.Model(&models.Task{}).
+						Where("id = ?", task.ParentTaskID).
+						Update("status", models.StatusSubmitted).Error; err != nil {
+						tx.Rollback()
+						c.JSON(http.StatusInternalServerError, gin.H{
+							"error": "failed to update parent task status: " + err.Error(),
+						})
+						return
+					}
+
+					// Отправляем уведомление в Redis очередь для родительской задачи
+					if err := redis.SendTaskNotification(parentTask.ID.String(), parentTask.Assignee); err != nil {
+						// Логируем ошибку, но не прерываем выполнение
+						c.Error(err)
+					}
+				} else {
 					tx.Rollback()
 					c.JSON(http.StatusInternalServerError, gin.H{
-						"error": "failed to update parent task status: " + err.Error(),
+						"error": "failed to get parent task: " + err.Error(),
 					})
 					return
 				}

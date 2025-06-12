@@ -13,6 +13,7 @@ import (
 	"agent-task-manager/database"
 	"agent-task-manager/handlers"
 	"agent-task-manager/handlers/tasks"
+	"agent-task-manager/redis"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -55,6 +56,11 @@ func main() {
 	// Инициализируем подключение к базе данных
 	if err := database.InitDB(cfg.PostgresURL); err != nil {
 		log.Fatal("Failed to initialize database:", err)
+	}
+
+	// Инициализируем подключение к Redis
+	if err := redis.InitRedis(cfg.RedisURL); err != nil {
+		log.Fatal("Failed to initialize Redis:", err)
 	}
 
 	router.GET("/health", handlers.HealthHandler)
@@ -114,6 +120,13 @@ func main() {
 		log.Printf("Error closing database connection: %v", err)
 	} else {
 		log.Println("Database connection closed")
+	}
+
+	// Закрываем соединение с Redis
+	if err := redis.CloseRedis(); err != nil {
+		log.Printf("Error closing Redis connection: %v", err)
+	} else {
+		log.Println("Redis connection closed")
 	}
 
 	log.Println("Server exited")
