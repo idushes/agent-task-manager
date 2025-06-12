@@ -65,7 +65,6 @@ func main() {
 	}
 
 	// Запускаем планировщик очистки задач
-	log.Printf("Starting task cleanup scheduler with interval: %v", cfg.CleanupInterval)
 	taskCleanupScheduler := scheduler.NewTaskCleanupScheduler(cfg.CleanupInterval)
 	go taskCleanupScheduler.Start()
 	defer taskCleanupScheduler.Stop()
