@@ -38,7 +38,9 @@ make DOCKER_USERNAME=yourusername release
 
 ```bash
 # 1. Generate JWT token
-TOKEN=$(curl -s "http://localhost:8081/generate-jwt?secret=your-secret-key&user_id=agent1" | jq -r .token)
+TOKEN=$(curl -s -X POST "http://localhost:8081/generate-jwt" \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"your-secret-key","user_id":"agent1"}' | jq -r .token)
 
 # 2. Create a task
 curl -X POST http://localhost:8081/task \
@@ -186,8 +188,17 @@ docker run -p 8081:8081 yourusername/agent-task-manager:latest
 ### Authentication
 
 #### Generate JWT Token
-- **GET** `/generate-jwt?secret={SECRET_KEY}&user_id={USER_ID}&expires_in={HOURS}`
+- **POST** `/generate-jwt`
   - Generates JWT token for authentication
+  - Rate limit: 5 requests per minute per IP
+  - Request body:
+    ```json
+    {
+      "secret": "your-secret-key",
+      "user_id": "user123",
+      "expires_in": 24
+    }
+    ```
   - Parameters:
     - `secret` (required) - Must match server's SECRET_KEY
     - `user_id` (optional) - Default: "anonymous"
@@ -465,6 +476,8 @@ CREATE TABLE tasks (
 - `POSTGRES_URL` - **Required** - PostgreSQL connection URL
 - `PORT` - Port to run the server on (default: 8081)
 - `REDIS_URL` - Redis connection URL (optional)
+- `BLACKLISTED_USERS` - Comma-separated list of blocked user IDs (optional)
+- `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (default: "*")
 
 ### Build/Deployment Configuration
 - `DOCKER_USERNAME` - Your Docker Hub username
@@ -489,7 +502,9 @@ Example of creating and managing a task hierarchy:
 
 ```bash
 # Get token
-TOKEN=$(curl -s "http://localhost:8081/generate-jwt?secret=your-secret-key&user_id=manager1" | jq -r .token)
+TOKEN=$(curl -s -X POST "http://localhost:8081/generate-jwt" \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"your-secret-key","user_id":"manager1"}' | jq -r .token)
 
 # 1. Create root task
 ROOT_TASK=$(curl -s -X POST http://localhost:8081/task \
@@ -511,7 +526,9 @@ SUBTASK1=$(curl -s -X POST http://localhost:8081/task \
   }' | jq -r .id)
 
 # 3. Get token for dev1 and work on task
-TOKEN_DEV1=$(curl -s "http://localhost:8081/generate-jwt?secret=your-secret-key&user_id=dev1" | jq -r .token)
+TOKEN_DEV1=$(curl -s -X POST "http://localhost:8081/generate-jwt" \
+  -H "Content-Type: application/json" \
+  -d '{"secret":"your-secret-key","user_id":"dev1"}' | jq -r .token)
 
 # 4. Dev1 gets their task (changes status to working)
 curl -H "Authorization: Bearer $TOKEN_DEV1" http://localhost:8081/task

@@ -76,15 +76,20 @@ func InfoHandler() gin.HandlerFunc {
 				},
 				"Authentication": {
 					{
-						Method:      "GET",
+						Method:      "POST",
 						Path:        "/generate-jwt",
-						Description: "Генерация JWT токена для аутентификации",
+						Description: "Генерация JWT токена для аутентификации (Rate limit: 5 запросов в минуту с одного IP)",
 						Auth:        false,
 						Request: map[string]interface{}{
-							"query_params": map[string]string{
+							"body": map[string]interface{}{
 								"secret":     "Секретный ключ сервиса (обязательный)",
-								"user_id":    "ID пользователя (по умолчанию 'anonymous')",
-								"expires_in": "Время жизни токена в часах (по умолчанию 8760)",
+								"user_id":    "ID пользователя (опциональный, по умолчанию 'anonymous')",
+								"expires_in": "Время жизни токена в часах (опциональный, по умолчанию 8760)",
+							},
+							"example": map[string]interface{}{
+								"secret":     "your-secret-key",
+								"user_id":    "user123",
+								"expires_in": 24,
 							},
 						},
 						Response: map[string]interface{}{
@@ -93,8 +98,9 @@ func InfoHandler() gin.HandlerFunc {
 							"user_id":    "user123",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Не указан secret или неверный формат параметров"},
+							{Code: 400, Description: "Неверный формат JSON или отсутствует обязательное поле secret"},
 							{Code: 401, Description: "Неверный secret"},
+							{Code: 429, Description: "Превышен лимит запросов (rate limit)"},
 						},
 					},
 					{
@@ -376,6 +382,30 @@ func InfoHandler() gin.HandlerFunc {
 						"8. Каждая задача имеет root_task_id для отслеживания иерархии",
 						"9. При получении задачи (GET /task) в ответ включаются завершенные подзадачи первого уровня",
 						"10. Только создатель root задачи может просматривать все задачи в её иерархии (GET /root-task/:id/tasks)",
+					},
+				},
+			},
+		}
+
+		// Добавляем информацию о безопасности
+		info.Endpoints["Security"] = []Endpoint{
+			{
+				Method:      "INFO",
+				Path:        "",
+				Description: "Механизмы безопасности",
+				Auth:        false,
+				Response: map[string]interface{}{
+					"features": []string{
+						"1. JWT токены для аутентификации с настраиваемым временем жизни",
+						"2. Rate limiting на эндпоинте /generate-jwt (5 запросов в минуту с одного IP)",
+						"3. Blacklist пользователей через переменную окружения BLACKLISTED_USERS (разделенные запятыми)",
+						"4. Секретный ключ передается через тело POST запроса, а не через URL",
+						"5. Проверка алгоритма подписи JWT для защиты от algorithm confusion атак",
+						"6. Блокировка всех токенов заблокированного пользователя автоматически",
+					},
+					"environment_variables": map[string]string{
+						"SECRET_KEY":        "Секретный ключ для подписи JWT токенов (обязательный)",
+						"BLACKLISTED_USERS": "Список заблокированных пользователей через запятую (опциональный)",
 					},
 				},
 			},

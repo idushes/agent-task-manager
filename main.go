@@ -61,7 +61,11 @@ func main() {
 	router.GET("/ready", handlers.ReadyHandler)
 	router.GET("/", handlers.InfoHandler())
 	router.GET("/info", handlers.InfoHandler())
-	router.GET("/generate-jwt", handlers.GenerateJWTHandler(cfg))
+
+	// Эндпоинт для генерации JWT с rate limiting (5 попыток за 1 минуту с одного IP)
+	router.POST("/generate-jwt",
+		handlers.RateLimitMiddleware(5, time.Minute),
+		handlers.GenerateJWTHandler(cfg))
 
 	// Защищенные роуты с JWT аутентификацией
 	router.GET("/me", handlers.JwtAuthMiddleware(cfg), handlers.MeHandler())

@@ -11,11 +11,12 @@ import (
 
 // Config структура для хранения конфигурации приложения
 type Config struct {
-	Port           string
-	SecretKey      string
-	PostgresURL    string
-	RedisURL       string
-	AllowedOrigins []string
+	Port             string
+	SecretKey        string
+	PostgresURL      string
+	RedisURL         string
+	AllowedOrigins   []string
+	BlacklistedUsers []string
 }
 
 // LoadConfig загружает конфигурацию из переменных окружения
@@ -53,6 +54,19 @@ func LoadConfig() (*Config, error) {
 			origins[i] = strings.TrimSpace(origin)
 		}
 		config.AllowedOrigins = origins
+	}
+
+	// Загружаем список заблокированных пользователей
+	blacklistedUsersStr := getEnvOrDefault("BLACKLISTED_USERS", "")
+	if blacklistedUsersStr != "" {
+		// Разделяем строку по запятым и удаляем пробелы
+		users := strings.Split(blacklistedUsersStr, ",")
+		for i, user := range users {
+			users[i] = strings.TrimSpace(user)
+		}
+		config.BlacklistedUsers = users
+	} else {
+		config.BlacklistedUsers = []string{}
 	}
 
 	// Проверяем обязательные параметры

@@ -3,7 +3,6 @@ package handlers
 import (
 	"agent-task-manager/config"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,6 +15,13 @@ type JWTResponse struct {
 	Token     string `json:"token"`
 	ExpiresAt int64  `json:"expires_at"`
 	UserID    string `json:"user_id"`
+}
+
+// GenerateJWTRequest структура для запроса генерации JWT токена
+type GenerateJWTRequest struct {
+	Secret    string `json:"secret" binding:"required"`
+	UserID    string `json:"user_id,omitempty"`
+	ExpiresIn int    `json:"expires_in,omitempty"`
 }
 
 // UserInfoResponse структура для ответа с информацией о пользователе
@@ -32,6 +38,12 @@ type Claims struct {
 
 // JwtAuthMiddleware middleware для проверки JWT токена
 func JwtAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+	// Создаем карту для быстрой проверки blacklist пользователей
+	blacklistedUsers := make(map[string]bool)
+	for _, user := range cfg.BlacklistedUsers {
+		blacklistedUsers[user] = true
+	}
+
 	return func(c *gin.Context) {
 		// Получаем токен из заголовка Authorization
 		authHeader := c.GetHeader("Authorization")
@@ -82,6 +94,15 @@ func JwtAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
+		// Проверяем, не заблокирован ли пользователь
+		if blacklistedUsers[claims.UserID] {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "user has been blocked",
+			})
+			c.Abort()
+			return
+		}
+
 		// Сохраняем claims в контексте для дальнейшего использования
 		c.Set("claims", claims)
 		c.Set("user_id", claims.UserID)
@@ -123,42 +144,33 @@ func MeHandler() gin.HandlerFunc {
 // GenerateJWTHandler обработчик для генерации JWT токена
 func GenerateJWTHandler(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Получаем secret из query параметра
-		secretParam := c.Query("secret")
+		var req GenerateJWTRequest
 
-		// Проверяем что secret передан
-		if secretParam == "" {
+		// Парсим JSON из тела запроса
+		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "secret parameter is required",
+				"error": "invalid request format: " + err.Error(),
 			})
 			return
 		}
 
 		// Проверяем что secret совпадает с секретом из конфига
-		if secretParam != cfg.SecretKey {
+		if req.Secret != cfg.SecretKey {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error": "invalid secret",
 			})
 			return
 		}
 
-		// Получаем параметр expires_in (в часах), по умолчанию год (8760 часов)
-		expiresInStr := c.DefaultQuery("expires_in", "8760") // 365 дней * 24 часа = 8760 часов
-		expiresInHours, err := strconv.Atoi(expiresInStr)
-		if err != nil || expiresInHours <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "expires_in must be a positive integer (hours)",
-			})
-			return
+		// Устанавливаем значения по умолчанию
+		userID := req.UserID
+		if userID == "" {
+			userID = "anonymous"
 		}
 
-		// Получаем параметр user_id, по умолчанию "anonymous"
-		userID := c.DefaultQuery("user_id", "anonymous")
-		if userID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "user_id cannot be empty",
-			})
-			return
+		expiresInHours := req.ExpiresIn
+		if expiresInHours <= 0 {
+			expiresInHours = 8760 // 365 дней * 24 часа = 8760 часов
 		}
 
 		// Вычисляем время истечения
