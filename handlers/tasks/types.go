@@ -33,3 +33,13 @@ type TaskWithSubtasks struct {
 	models.Task
 	CompletedSubtasks []models.Task `json:"completed_subtasks,omitempty"`
 }
+
+// RootTaskSummary структура для ответа со списком корневых задач с ограниченными полями
+type RootTaskSummary struct {
+	RootTaskID  uuid.UUID         `json:"root_task_id"`
+	CreatedAt   time.Time         `json:"created_at"`
+	DeleteAt    *time.Time        `json:"delete_at,omitempty"`
+	Assignee    string            `json:"assignee"`
+	Description string            `json:"description"`
+	Status      models.TaskStatus `json:"status"`
+}
