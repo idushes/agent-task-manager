@@ -279,6 +279,34 @@ func InfoHandler() gin.HandlerFunc {
 							{Code: 401, Description: "Требуется авторизация"},
 						},
 					},
+					{
+						Method:      "GET",
+						Path:        "/root-task",
+						Description: "Получение списка корневых задач текущего пользователя (где id == root_task_id и created_by == текущий пользователь)",
+						Auth:        true,
+						Response: []map[string]interface{}{
+							{
+								"root_task_id": "123e4567-e89b-12d3-a456-426614174000",
+								"created_at":   "2024-01-20T10:30:00Z",
+								"delete_at":    "2024-04-20T10:30:00Z",
+								"assignee":     "agent1",
+								"description":  "Основная задача 1",
+								"status":       "submitted",
+							},
+							{
+								"root_task_id": "789a0123-e89b-12d3-a456-426614174002",
+								"created_at":   "2024-01-21T14:00:00Z",
+								"delete_at":    nil,
+								"assignee":     "agent2",
+								"description":  "Основная задача 2",
+								"status":       "completed",
+							},
+						},
+						Errors: []ErrorInfo{
+							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 500, Description: "Ошибка при получении задач из базы данных"},
+						},
+					},
 				},
 			},
 		}
