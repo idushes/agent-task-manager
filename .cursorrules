@@ -1,0 +1,23 @@
+# Agent Task Manager Development Rules
+
+## API Development Guidelines
+
+### Route Management
+- When creating new routes or modifying existing routes, ALWAYS update the `/info` route handler in `handlers/info.go` to reflect the changes
+- The info route serves as the API documentation and must stay synchronized with actual endpoints
+- Include proper request/response examples and error codes in the info route documentation
+
+### Code Structure
+- Follow existing patterns for handler organization (separate files per functionality in `handlers/tasks/`)
+- Use appropriate middleware for JWT authentication on protected routes
+- Maintain consistent error response format across all endpoints
+
+### Database Operations
+- Use transactions for operations that modify multiple records
+- Apply proper indexes for performance-critical queries
+- Follow GORM conventions for model definitions
+
+### Documentation
+- Keep README.md updated with any architectural changes
+- Document complex business logic inline with clear comments
+- Update ARCHITECTURE.md when adding new components 
