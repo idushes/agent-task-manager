@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -17,6 +18,7 @@ type Config struct {
 	RedisURL         string
 	AllowedOrigins   []string
 	BlacklistedUsers []string
+	CleanupInterval  time.Duration
 }
 
 // LoadConfig загружает конфигурацию из переменных окружения
@@ -42,6 +44,15 @@ func LoadConfig() (*Config, error) {
 		PostgresURL: getEnvOrDefault("POSTGRES_URL", ""),
 		RedisURL:    getEnvOrDefault("REDIS_URL", ""),
 	}
+
+	// Загружаем интервал очистки (по умолчанию 1 час)
+	cleanupIntervalStr := getEnvOrDefault("CLEANUP_INTERVAL", "1h")
+	cleanupInterval, err := time.ParseDuration(cleanupIntervalStr)
+	if err != nil {
+		log.Printf("Invalid CLEANUP_INTERVAL format, using default (1h): %v", err)
+		cleanupInterval = 1 * time.Hour
+	}
+	config.CleanupInterval = cleanupInterval
 
 	// Загружаем список разрешенных доменов
 	allowedOriginsStr := getEnvOrDefault("ALLOWED_ORIGINS", "*")

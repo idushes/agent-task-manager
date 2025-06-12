@@ -14,6 +14,7 @@ import (
 	"agent-task-manager/handlers"
 	"agent-task-manager/handlers/tasks"
 	"agent-task-manager/redis"
+	"agent-task-manager/scheduler"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -62,6 +63,12 @@ func main() {
 	if err := redis.InitRedis(cfg.RedisURL); err != nil {
 		log.Fatal("Failed to initialize Redis:", err)
 	}
+
+	// Запускаем планировщик очистки задач
+	log.Printf("Starting task cleanup scheduler with interval: %v", cfg.CleanupInterval)
+	taskCleanupScheduler := scheduler.NewTaskCleanupScheduler(cfg.CleanupInterval)
+	go taskCleanupScheduler.Start()
+	defer taskCleanupScheduler.Stop()
 
 	router.GET("/health", handlers.HealthHandler)
 	router.GET("/ready", handlers.ReadyHandler)

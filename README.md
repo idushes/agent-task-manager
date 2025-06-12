@@ -353,6 +353,7 @@ All task endpoints require JWT authentication via `Authorization: Bearer {token}
 9. When getting a task (GET /task), completed first-level subtasks are included in the response
 10. Only the creator of a root task can view all tasks in its hierarchy (GET /root-task/:id/tasks)
 11. When a task transitions to `submitted` status, a notification is automatically sent to Redis queue `task_notifications` with task ID and assignee name
+12. Automatic cleanup process runs every hour (configurable via `CLEANUP_INTERVAL`) to delete tasks where `delete_at` < current time
 
 ### Task Hierarchy Example
 ```
@@ -505,6 +506,7 @@ CREATE TABLE tasks (
 - `PORT` - Port to run the server on (default: 8081)
 - `BLACKLISTED_USERS` - Comma-separated list of blocked user IDs (optional)
 - `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (default: "*")
+- `CLEANUP_INTERVAL` - Interval for automatic task cleanup (default: "1h", format: "30m", "2h", "24h", etc.)
 
 ### Build/Deployment Configuration
 - `DOCKER_USERNAME` - Your Docker Hub username
@@ -578,6 +580,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 - `main.go` - Main application file with Gin router setup
 - `config/config.go` - Configuration management
 - `database/database.go` - Database connection and initialization
+- `scheduler/`
+  - `cleanup.go` - Automatic task cleanup scheduler
 - `handlers/`
   - `health.go` - Health check handlers for Kubernetes probes
   - `jwt_auth.go` - JWT authentication middleware and handlers
