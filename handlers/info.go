@@ -308,6 +308,32 @@ func InfoHandler() gin.HandlerFunc {
 						},
 					},
 				},
+				"Statistics": {
+					{
+						Method:      "GET",
+						Path:        "/stat",
+						Description: "Получение статистики по задачам пользователя за указанный период",
+						Auth:        true,
+						Request: map[string]interface{}{
+							"query_params": map[string]string{
+								"period": "Период для статистики (опциональный, по умолчанию 'all-time'). Возможные значения: today, yesterday, week, month, year, all-time",
+							},
+						},
+						Response: map[string]interface{}{
+							"period":        "week",
+							"pending_tasks": 15,
+							"in_progress":   3,
+							"new_tasks":     25,
+							"failed_tasks":  2,
+							"_note":         "pending_tasks и in_progress показывают текущее состояние, new_tasks и failed_tasks считаются за указанный период",
+						},
+						Errors: []ErrorInfo{
+							{Code: 400, Description: "Неверный параметр period"},
+							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 500, Description: "Ошибка при подсчете статистики"},
+						},
+					},
+				},
 			},
 		}
 
