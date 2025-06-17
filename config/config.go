@@ -12,13 +12,13 @@ import (
 
 // Config структура для хранения конфигурации приложения
 type Config struct {
-	Port             string
-	SecretKey        string
-	PostgresURL      string
-	RedisURL         string
-	AllowedOrigins   []string
-	BlacklistedUsers []string
-	CleanupInterval  time.Duration
+	Port              string
+	SecretKey         string
+	PostgresURL       string
+	AllowedOrigins    []string
+	BlacklistedUsers  []string
+	CleanupInterval   time.Duration
+	CacheSyncInterval time.Duration
 }
 
 // LoadConfig загружает конфигурацию из переменных окружения
@@ -42,7 +42,6 @@ func LoadConfig() (*Config, error) {
 		Port:        getEnvOrDefault("PORT", "8081"),
 		SecretKey:   getEnvOrDefault("SECRET_KEY", ""),
 		PostgresURL: getEnvOrDefault("POSTGRES_URL", ""),
-		RedisURL:    getEnvOrDefault("REDIS_URL", ""),
 	}
 
 	// Загружаем интервал очистки (по умолчанию 1 час)
@@ -53,6 +52,15 @@ func LoadConfig() (*Config, error) {
 		cleanupInterval = 1 * time.Hour
 	}
 	config.CleanupInterval = cleanupInterval
+
+	// Загружаем интервал синхронизации кэша (по умолчанию 10 минут)
+	cacheSyncIntervalStr := getEnvOrDefault("CACHE_SYNC_INTERVAL", "10m")
+	cacheSyncInterval, err := time.ParseDuration(cacheSyncIntervalStr)
+	if err != nil {
+		log.Printf("Invalid CACHE_SYNC_INTERVAL format, using default (10m): %v", err)
+		cacheSyncInterval = 10 * time.Minute
+	}
+	config.CacheSyncInterval = cacheSyncInterval
 
 	// Загружаем список разрешенных доменов
 	allowedOriginsStr := getEnvOrDefault("ALLOWED_ORIGINS", "*")

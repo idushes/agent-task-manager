@@ -9,11 +9,11 @@ import (
 	"syscall"
 	"time"
 
+	"agent-task-manager/cache"
 	"agent-task-manager/config"
 	"agent-task-manager/database"
 	"agent-task-manager/handlers"
 	"agent-task-manager/handlers/tasks"
-	"agent-task-manager/redis"
 	"agent-task-manager/scheduler"
 
 	"github.com/gin-contrib/cors"
@@ -51,7 +51,7 @@ func main() {
 
 	// Добавляем кастомный Logger middleware, исключающий health-check пути
 	router.Use(gin.LoggerWithConfig(gin.LoggerConfig{
-		SkipPaths: []string{"/health", "/ready"},
+		SkipPaths: []string{"/health", "/ready", "/users-with-tasks"},
 	}))
 
 	// Инициализируем подключение к базе данных
@@ -59,10 +59,15 @@ func main() {
 		log.Fatal("Failed to initialize database:", err)
 	}
 
-	// Инициализируем подключение к Redis
-	if err := redis.InitRedis(cfg.RedisURL); err != nil {
-		log.Fatal("Failed to initialize Redis:", err)
+	// Инициализируем кэш пользователей
+	if err := cache.InitUsersCache(); err != nil {
+		log.Printf("Warning: failed to sync users cache: %v", err)
+		// Не прерываем выполнение, так как это не критично
 	}
+
+	// Запускаем периодическую синхронизацию кэша каждые 10 минут
+	cache.StartPeriodicSync(cfg.CacheSyncInterval)
+	defer cache.StopPeriodicSync()
 
 	// Запускаем планировщик очистки задач
 	taskCleanupScheduler := scheduler.NewTaskCleanupScheduler(cfg.CleanupInterval)
@@ -89,6 +94,7 @@ func main() {
 	router.GET("/root-task/:id/tasks", handlers.JwtAuthMiddleware(cfg), tasks.GetRootTasksHandler())
 	router.GET("/root-task", handlers.JwtAuthMiddleware(cfg), tasks.GetUserRootTasksHandler())
 	router.GET("/stat", handlers.JwtAuthMiddleware(cfg), handlers.StatsHandler())
+	router.GET("/users-with-tasks", handlers.JwtAuthMiddleware(cfg), tasks.GetUsersWithTasksHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
@@ -126,13 +132,6 @@ func main() {
 		log.Printf("Error closing database connection: %v", err)
 	} else {
 		log.Println("Database connection closed")
-	}
-
-	// Закрываем соединение с Redis
-	if err := redis.CloseRedis(); err != nil {
-		log.Printf("Error closing Redis connection: %v", err)
-	} else {
-		log.Println("Redis connection closed")
 	}
 
 	log.Println("Server exited")

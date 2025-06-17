@@ -10,7 +10,7 @@ A hierarchical task management API service built with Go, Gin framework, and GOR
 - 🚀 **Auto Status Transitions** - Smart status updates based on subtask completion
 - 🗑️ **Auto Cleanup** - Tasks automatically deleted after configurable period
 - 🔒 **Role-based Access** - Different permissions for assignee and task creator
-- 📬 **Redis Notifications** - Automatic notifications when tasks transition to submitted status
+- 💾 **In-Memory Caching** - Fast in-memory storage of users with active tasks
 - 🏥 **Kubernetes Ready** - Built-in health and readiness probes
 - 🌍 **Multi-platform Docker** - Supports linux/amd64 and linux/arm64
 
@@ -81,9 +81,9 @@ make run
 
 The service will start on port 8081.
 
-### Running with PostgreSQL and Redis
+### Running with PostgreSQL
 
-The service requires PostgreSQL database and Redis. You can run them locally with Docker:
+The service requires PostgreSQL database. You can run it locally with Docker:
 
 ```bash
 # Start PostgreSQL with Docker
@@ -95,15 +95,8 @@ docker run -d \
   -p 5432:5432 \
   postgres:15
 
-# Start Redis with Docker
-docker run -d \
-  --name redis-task-manager \
-  -p 6379:6379 \
-  redis:7-alpine
-
 # Set environment variables
 export POSTGRES_URL="postgres://taskuser:taskpass@localhost:5432/taskdb?sslmode=disable"
-export REDIS_URL="redis://localhost:6379"
 export SECRET_KEY="your-secure-secret-key"
 
 # Run the service
@@ -129,28 +122,18 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
   app:
     build: .
     ports:
       - "8081:8081"
     environment:
       POSTGRES_URL: postgres://taskuser:taskpass@postgres:5432/taskdb?sslmode=disable
-      REDIS_URL: redis://redis:6379
       SECRET_KEY: your-secure-secret-key
     depends_on:
       - postgres
-      - redis
 
 volumes:
   postgres_data:
-  redis_data:
 ```
 
 Then run: `docker-compose up`
@@ -329,6 +312,17 @@ All task endpoints require JWT authentication via `Authorization: Bearer {token}
   ]
   ```
 
+#### Get Users with Tasks
+- **GET** `/users-with-tasks` - Get list of users with active tasks
+  - Returns list of user IDs from Redis cache
+  - Headers: `Authorization: Bearer {token}`
+  ```json
+  {
+    "users": ["user1", "user2", "user3"],
+    "count": 3
+  }
+  ```
+
 ## Task Lifecycle & Business Logic
 
 ### Task Statuses
@@ -352,7 +346,7 @@ All task endpoints require JWT authentication via `Authorization: Bearer {token}
 8. Each task has `root_task_id` for hierarchy tracking
 9. When getting a task (GET /task), completed first-level subtasks are included in the response
 10. Only the creator of a root task can view all tasks in its hierarchy (GET /root-task/:id/tasks)
-11. When a task transitions to `submitted` status, a notification is automatically sent to Redis queue `task_notifications` with task ID and assignee name
+11. In-memory cache stores the list of users with active tasks for efficient querying via the `/users-with-tasks` endpoint
 12. Automatic cleanup process runs every hour (configurable via `CLEANUP_INTERVAL`) to delete tasks where `delete_at` < current time
 
 ### Task Hierarchy Example
@@ -441,7 +435,7 @@ The application supports configuration through environment variables or a `.env`
    # Optional
    PORT=8081
    POSTGRES_URL=postgres://user:password@localhost:5432/dbname?sslmode=disable
-   REDIS_URL=redis://localhost:6379
+   CACHE_SYNC_INTERVAL=10m
    ```
 
 3. Run the application:
@@ -459,14 +453,16 @@ The application supports configuration through environment variables or a `.env`
 
 - `SECRET_KEY` - **Required** for JWT token signing. Application will not start without it.
 - `POSTGRES_URL` - **Required** for database connection. Application will not start without it.
-- `REDIS_URL` - **Required** for Redis connection. Application will not start without it.
 
-### Redis Configuration
+### In-Memory Cache
 
-The application requires Redis for task notifications:
-- `REDIS_URL` - **Required** for Redis connection (e.g., `redis://localhost:6379`)
-- A queue named `task_notifications` is automatically created on startup
-- Task notifications are pushed to Redis when tasks transition to `submitted` status
+The application uses in-memory cache for storing users with active tasks:
+- Thread-safe map structure for storing unique user IDs
+- Automatically syncs with database on startup
+- Periodic synchronization every 10 minutes (configurable via `CACHE_SYNC_INTERVAL`)
+- Updates in real-time as tasks are created/completed/canceled
+- Use `/users-with-tasks` endpoint to get the list of users with active tasks
+- No external dependencies required
 
 ### Database Configuration
 
@@ -502,11 +498,11 @@ CREATE TABLE tasks (
 ### Application Configuration
 - `SECRET_KEY` - **Required** - Secret key for JWT token signing
 - `POSTGRES_URL` - **Required** - PostgreSQL connection URL
-- `REDIS_URL` - **Required** - Redis connection URL for task notifications
 - `PORT` - Port to run the server on (default: 8081)
 - `BLACKLISTED_USERS` - Comma-separated list of blocked user IDs (optional)
 - `ALLOWED_ORIGINS` - Comma-separated list of allowed CORS origins (default: "*")
 - `CLEANUP_INTERVAL` - Interval for automatic task cleanup (default: "1h", format: "30m", "2h", "24h", etc.)
+- `CACHE_SYNC_INTERVAL` - Interval for cache synchronization with database (default: "10m", format: "5m", "30m", "1h", etc.)
 
 ### Build/Deployment Configuration
 - `DOCKER_USERNAME` - Your Docker Hub username

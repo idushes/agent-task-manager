@@ -1,9 +1,9 @@
 package tasks
 
 import (
+	"agent-task-manager/cache"
 	"agent-task-manager/database"
 	"agent-task-manager/models"
-	"agent-task-manager/redis"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -133,10 +133,9 @@ func CreateTaskHandler() gin.HandlerFunc {
 			return
 		}
 
-		// Отправляем уведомление в Redis очередь для новой задачи со статусом submitted
-		if err := redis.SendTaskNotification(task.ID.String(), task.Assignee); err != nil {
-			// Логируем ошибку, но не прерываем выполнение
-			c.Error(err)
+		// Добавляем пользователя в кэш, если задача в статусе submitted
+		if task.Status == models.StatusSubmitted {
+			cache.AddUserWithTask(task.Assignee)
 		}
 
 		// Если ParentTaskID == NULL, устанавливаем RootTaskID = ID созданной задачи

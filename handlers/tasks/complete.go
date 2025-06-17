@@ -1,9 +1,9 @@
 package tasks
 
 import (
+	"agent-task-manager/cache"
 	"agent-task-manager/database"
 	"agent-task-manager/models"
-	"agent-task-manager/redis"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -158,7 +158,7 @@ func CompleteTaskHandler() gin.HandlerFunc {
 
 			// Если все подзадачи завершены или отменены, обновляем статус родительской задачи
 			if totalCount > 0 && totalCount == completedOrCanceledCount {
-				// Получаем информацию о родительской задаче для отправки уведомления
+				// Получаем информацию о родительской задаче
 				var parentTask models.Task
 				if err := tx.First(&parentTask, "id = ?", task.ParentTaskID).Error; err == nil {
 					// Обновляем статус родительской задачи
@@ -172,11 +172,8 @@ func CompleteTaskHandler() gin.HandlerFunc {
 						return
 					}
 
-					// Отправляем уведомление в Redis очередь для родительской задачи
-					if err := redis.SendTaskNotification(parentTask.ID.String(), parentTask.Assignee); err != nil {
-						// Логируем ошибку, но не прерываем выполнение
-						c.Error(err)
-					}
+					// Добавляем исполнителя родительской задачи в кэш
+					cache.AddUserWithTask(parentTask.Assignee)
 				} else {
 					tx.Rollback()
 					c.JSON(http.StatusInternalServerError, gin.H{
@@ -185,6 +182,20 @@ func CompleteTaskHandler() gin.HandlerFunc {
 					return
 				}
 			}
+		}
+
+		// Проверяем, есть ли у пользователя другие активные задачи
+		var activeTaskCount int64
+		tx.Model(&models.Task{}).
+			Where("assignee = ? AND status IN ?", task.Assignee, []models.TaskStatus{
+				models.StatusSubmitted,
+				models.StatusWorking,
+				models.StatusWaiting,
+			}).Count(&activeTaskCount)
+
+		// Если активных задач больше нет, удаляем пользователя из кэша
+		if activeTaskCount == 0 {
+			cache.RemoveUserWithTask(task.Assignee)
 		}
 
 		// Коммитим транзакцию
