@@ -78,6 +78,7 @@ func main() {
 	router.GET("/ready", handlers.ReadyHandler)
 	router.GET("/", handlers.InfoHandler())
 	router.GET("/info", handlers.InfoHandler())
+	router.GET("/users-with-tasks", tasks.GetUsersWithTasksHandler())
 
 	// Эндпоинт для генерации JWT с rate limiting (5 попыток за 1 минуту с одного IP)
 	router.POST("/generate-jwt",
@@ -94,7 +95,6 @@ func main() {
 	router.GET("/root-task/:id/tasks", handlers.JwtAuthMiddleware(cfg), tasks.GetRootTasksHandler())
 	router.GET("/root-task", handlers.JwtAuthMiddleware(cfg), tasks.GetUserRootTasksHandler())
 	router.GET("/stat", handlers.JwtAuthMiddleware(cfg), handlers.StatsHandler())
-	router.GET("/users-with-tasks", handlers.JwtAuthMiddleware(cfg), tasks.GetUsersWithTasksHandler())
 
 	// Создаем HTTP сервер
 	srv := &http.Server{
