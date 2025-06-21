@@ -3,6 +3,7 @@ package tasks
 import (
 	"agent-task-manager/cache"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,12 +12,38 @@ import (
 func GetUsersWithTasksHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Получаем список пользователей из кэша
-		users := cache.GetUsersWithTasks()
+		allUsers := cache.GetUsersWithTasks()
+
+		// Получаем параметр filter из query string
+		filterParam := c.Query("filter")
+
+		var filteredUsers []string
+
+		if filterParam != "" {
+			// Разбиваем filter по запятым и очищаем от пробелов
+			filterUsers := make(map[string]bool)
+			for _, user := range strings.Split(filterParam, ",") {
+				user = strings.TrimSpace(user)
+				if user != "" {
+					filterUsers[user] = true
+				}
+			}
+
+			// Фильтруем пользователей
+			for _, user := range allUsers {
+				if filterUsers[user] {
+					filteredUsers = append(filteredUsers, user)
+				}
+			}
+		} else {
+			// Если фильтр не задан, возвращаем всех пользователей
+			filteredUsers = allUsers
+		}
 
 		// Возвращаем список пользователей
 		c.JSON(http.StatusOK, gin.H{
-			"users": users,
-			"count": len(users),
+			"users": filteredUsers,
+			"count": len(filteredUsers),
 		})
 	}
 }

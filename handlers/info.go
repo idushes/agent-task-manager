@@ -346,9 +346,15 @@ func InfoHandler() gin.HandlerFunc {
 						Path:        "/users-with-tasks",
 						Description: "Получение списка пользователей с активными задачами (из in-memory кэша)",
 						Auth:        true,
+						Request: map[string]interface{}{
+							"query_params": map[string]string{
+								"filter": "Список пользователей через запятую для фильтрации (опциональный). Пример: user1,user2,user3",
+							},
+						},
 						Response: map[string]interface{}{
 							"users": []string{"user1", "user2", "user3"},
 							"count": 3,
+							"_note": "Если параметр filter указан, возвращаются только пользователи из списка, которые имеют активные задачи",
 						},
 						Errors: []ErrorInfo{
 							{Code: 401, Description: "Требуется авторизация"},
