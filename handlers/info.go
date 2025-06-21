@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// APIInfo структура для документации API
+// APIInfo structure for API documentation
 type APIInfo struct {
 	Title       string                `json:"title"`
 	Version     string                `json:"version"`
@@ -16,14 +16,14 @@ type APIInfo struct {
 	Endpoints   map[string][]Endpoint `json:"endpoints"`
 }
 
-// AuthInfo информация об аутентификации
+// AuthInfo authentication information
 type AuthInfo struct {
 	Type        string `json:"type"`
 	Description string `json:"description"`
 	Example     string `json:"example"`
 }
 
-// Endpoint описание эндпоинта
+// Endpoint endpoint description
 type Endpoint struct {
 	Method      string      `json:"method"`
 	Path        string      `json:"path"`
@@ -34,23 +34,23 @@ type Endpoint struct {
 	Errors      []ErrorInfo `json:"possible_errors,omitempty"`
 }
 
-// ErrorInfo информация об ошибке
+// ErrorInfo error information
 type ErrorInfo struct {
 	Code        int    `json:"code"`
 	Description string `json:"description"`
 }
 
-// InfoHandler обработчик для получения информации об API
+// InfoHandler handler for getting API information
 func InfoHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		info := APIInfo{
 			Title:       "Agent Task Manager API",
 			Version:     "1.0.0",
-			Description: "API для управления задачами агентов с поддержкой иерархии задач и аутентификации через JWT",
+			Description: "API for managing agent tasks with task hierarchy support and JWT authentication",
 			BaseURL:     "https://task.agent.lisacorp.com",
 			Auth: AuthInfo{
 				Type:        "Bearer Token (JWT)",
-				Description: "Для защищенных эндпоинтов требуется JWT токен в заголовке Authorization",
+				Description: "JWT token in Authorization header is required for protected endpoints",
 				Example:     "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
 			},
 			Endpoints: map[string][]Endpoint{
@@ -58,7 +58,7 @@ func InfoHandler() gin.HandlerFunc {
 					{
 						Method:      "GET",
 						Path:        "/health",
-						Description: "Проверка работоспособности сервиса",
+						Description: "Service health check",
 						Auth:        false,
 						Response: map[string]string{
 							"status": "healthy",
@@ -67,7 +67,7 @@ func InfoHandler() gin.HandlerFunc {
 					{
 						Method:      "GET",
 						Path:        "/ready",
-						Description: "Проверка готовности сервиса (включая БД)",
+						Description: "Service readiness check (including DB)",
 						Auth:        false,
 						Response: map[string]string{
 							"status": "ready",
@@ -78,13 +78,13 @@ func InfoHandler() gin.HandlerFunc {
 					{
 						Method:      "POST",
 						Path:        "/generate-jwt",
-						Description: "Генерация JWT токена для аутентификации (Rate limit: 5 запросов в минуту с одного IP)",
+						Description: "Generate JWT token for authentication (Rate limit: 5 requests per minute per IP)",
 						Auth:        false,
 						Request: map[string]interface{}{
 							"body": map[string]interface{}{
-								"secret":     "Секретный ключ сервиса (обязательный)",
-								"user_id":    "ID пользователя (опциональный, по умолчанию 'anonymous')",
-								"expires_in": "Время жизни токена в часах (опциональный, по умолчанию 8760)",
+								"secret":     "Service secret key (required)",
+								"user_id":    "User ID (optional, default 'anonymous')",
+								"expires_in": "Token lifetime in hours (optional, default 8760)",
 							},
 							"example": map[string]interface{}{
 								"secret":     "your-secret-key",
@@ -98,22 +98,22 @@ func InfoHandler() gin.HandlerFunc {
 							"user_id":    "user123",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Неверный формат JSON или отсутствует обязательное поле secret"},
-							{Code: 401, Description: "Неверный secret"},
-							{Code: 429, Description: "Превышен лимит запросов (rate limit)"},
+							{Code: 400, Description: "Invalid JSON format or missing required field 'secret'"},
+							{Code: 401, Description: "Invalid secret"},
+							{Code: 429, Description: "Rate limit exceeded"},
 						},
 					},
 					{
 						Method:      "GET",
 						Path:        "/me",
-						Description: "Получение информации о текущем пользователе",
+						Description: "Get current user information",
 						Auth:        true,
 						Response: map[string]interface{}{
 							"user_id":    "user123",
 							"expires_at": 1735689600,
 						},
 						Errors: []ErrorInfo{
-							{Code: 401, Description: "Отсутствует или невалидный токен"},
+							{Code: 401, Description: "Missing or invalid token"},
 						},
 					},
 				},
@@ -121,13 +121,13 @@ func InfoHandler() gin.HandlerFunc {
 					{
 						Method:      "POST",
 						Path:        "/task",
-						Description: "Создание новой задачи",
+						Description: "Create new task",
 						Auth:        true,
 						Request: map[string]interface{}{
-							"description":    "Описание задачи (обязательный)",
-							"assignee":       "ID исполнителя (опциональный)",
-							"parent_task_id": "UUID родительской задачи (опциональный)",
-							"delete_at":      "Дата удаления задачи ISO 8601 (опциональный, по умолчанию +3 месяца)",
+							"description":    "Task description (required)",
+							"assignee":       "Assignee ID (optional)",
+							"parent_task_id": "Parent task UUID (optional)",
+							"delete_at":      "Task deletion date ISO 8601 (optional, default +3 months)",
 							"credentials": map[string]interface{}{
 								"service_name": map[string]string{
 									"ENV_VAR": "value",
@@ -157,101 +157,101 @@ func InfoHandler() gin.HandlerFunc {
 							"status":         "submitted",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Неверный формат данных или родительская задача в недопустимом статусе"},
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 400, Description: "Invalid data format or parent task in invalid status"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 					{
 						Method:      "GET",
 						Path:        "/task",
-						Description: "Получение задачи в работу (берется первая доступная задача где assignee = текущий пользователь и status = submitted)",
+						Description: "Get task for work (takes first available task where assignee = current user and status = submitted)",
 						Auth:        true,
 						Response: map[string]interface{}{
 							"id":          "123e4567-e89b-12d3-a456-426614174000",
 							"status":      "working",
-							"description": "Проанализировать данные",
-							"_note":       "Статус автоматически меняется на 'working'",
+							"description": "Analyze data",
+							"_note":       "Status automatically changes to 'working'",
 							"completed_subtasks": []map[string]interface{}{
 								{
 									"id":          "456e7890-e89b-12d3-a456-426614174001",
-									"description": "Подзадача 1",
+									"description": "Subtask 1",
 									"status":      "completed",
-									"result":      "Подзадача выполнена успешно",
+									"result":      "Subtask completed successfully",
 								},
 							},
 						},
 						Errors: []ErrorInfo{
-							{Code: 404, Description: "Нет доступных задач для данного пользователя"},
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 404, Description: "No available tasks for this user"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 					{
 						Method:      "POST",
 						Path:        "/task/:id/complete",
-						Description: "Завершение задачи (только assignee может завершить задачу)",
+						Description: "Complete task (only assignee can complete task)",
 						Auth:        true,
 						Request: map[string]interface{}{
-							"description": "Результат выполнения задачи (обязательный)",
-							"delete_at":   "Новая дата удаления ISO 8601 (опциональный)",
+							"description": "Task execution result (required)",
+							"delete_at":   "New deletion date ISO 8601 (optional)",
 						},
 						Response: map[string]interface{}{
 							"id":     "123e4567-e89b-12d3-a456-426614174000",
 							"status": "completed",
-							"result": "Анализ завершен. Рост продаж составил 15%",
-							"_note":  "При завершении задачи все активные подзадачи (submitted, working, waiting) автоматически отменяются. Если все подзадачи завершены (completed) или отменены (canceled), родительская задача переводится в status = submitted",
+							"result": "Analysis completed. Sales growth is 15%",
+							"_note":  "When completing a task, all active subtasks (submitted, working, waiting) are automatically canceled. If all subtasks are completed or canceled, parent task is moved to status = submitted",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Задача не в статусе 'working' или неверный формат данных"},
-							{Code: 403, Description: "Только assignee может завершить задачу"},
-							{Code: 404, Description: "Задача не найдена"},
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 400, Description: "Task not in 'working' status or invalid data format"},
+							{Code: 403, Description: "Only assignee can complete task"},
+							{Code: 404, Description: "Task not found"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 					{
 						Method:      "POST",
 						Path:        "/task/:id/cancel",
-						Description: "Отмена задачи и всех её подзадач (может выполнить assignee или создатель)",
+						Description: "Cancel task and all its subtasks (can be performed by assignee or creator)",
 						Auth:        true,
 						Request: map[string]interface{}{
-							"_note": "Тело запроса не требуется",
+							"_note": "Request body not required",
 						},
 						Response: map[string]interface{}{
 							"id":     "123e4567-e89b-12d3-a456-426614174000",
 							"status": "canceled",
-							"_note":  "При отмене задачи все активные подзадачи (submitted, working, waiting) рекурсивно отменяются. Если все подзадачи родителя теперь completed или canceled, родитель переводится в status = submitted",
+							"_note":  "When canceling a task, all active subtasks (submitted, working, waiting) are recursively canceled. If all parent's subtasks are now completed or canceled, parent is moved to status = submitted",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Нельзя отменить задачу со статусом completed, canceled или failed"},
-							{Code: 403, Description: "Только assignee или создатель может отменить задачу"},
-							{Code: 404, Description: "Задача не найдена"},
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 400, Description: "Cannot cancel task with status completed, canceled or failed"},
+							{Code: 403, Description: "Only assignee or creator can cancel task"},
+							{Code: 404, Description: "Task not found"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 					{
 						Method:      "POST",
 						Path:        "/tasks/:id/fail",
-						Description: "Пометка задачи как неудачной (только assignee может провалить задачу)",
+						Description: "Mark task as failed (only assignee can fail task)",
 						Auth:        true,
 						Request: map[string]interface{}{
-							"reason": "Причина неудачи (обязательный)",
+							"reason": "Failure reason (required)",
 						},
 						Response: map[string]interface{}{
 							"id":     "123e4567-e89b-12d3-a456-426614174000",
 							"status": "failed",
-							"result": "FAILURE REASON: Не удалось подключиться к базе данных",
-							"_note":  "Родительская задача остается в статусе waiting и ждет завершения остальных подзадач",
+							"result": "FAILURE REASON: Could not connect to database",
+							"_note":  "Parent task remains in waiting status and waits for completion of other subtasks",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Задача не в статусе 'working' или неверный формат данных"},
-							{Code: 403, Description: "Только assignee может провалить задачу"},
-							{Code: 404, Description: "Задача не найдена"},
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 400, Description: "Task not in 'working' status or invalid data format"},
+							{Code: 403, Description: "Only assignee can fail task"},
+							{Code: 404, Description: "Task not found"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 					{
 						Method:      "GET",
 						Path:        "/root-task/:id/tasks",
-						Description: "Получение всех задач по root_task_id (доступно только создателю root задачи)",
+						Description: "Get all tasks by root_task_id (available only to root task creator)",
 						Auth:        true,
 						Response: []map[string]interface{}{
 							{
@@ -259,19 +259,19 @@ func InfoHandler() gin.HandlerFunc {
 								"created_at":     "2024-01-20T10:30:00Z",
 								"created_by":     "user123",
 								"assignee":       "agent1",
-								"description":    "Основная задача",
+								"description":    "Main task",
 								"root_task_id":   "123e4567-e89b-12d3-a456-426614174000",
 								"parent_task_id": nil,
 								"result":         "",
 								"status":         "submitted",
-								"_note":          "Поле credentials исключено из вывода",
+								"_note":          "Credentials field excluded from output",
 							},
 							{
 								"id":             "456e7890-e89b-12d3-a456-426614174001",
 								"created_at":     "2024-01-20T10:35:00Z",
 								"created_by":     "user123",
 								"assignee":       "agent2",
-								"description":    "Подзадача",
+								"description":    "Subtask",
 								"root_task_id":   "123e4567-e89b-12d3-a456-426614174000",
 								"parent_task_id": "123e4567-e89b-12d3-a456-426614174000",
 								"result":         "",
@@ -279,16 +279,16 @@ func InfoHandler() gin.HandlerFunc {
 							},
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Неверный формат ID"},
-							{Code: 403, Description: "Доступ запрещен: вы не являетесь создателем root задачи"},
-							{Code: 404, Description: "Root задача не найдена"},
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 400, Description: "Invalid ID format"},
+							{Code: 403, Description: "Access denied: you are not the creator of the root task"},
+							{Code: 404, Description: "Root task not found"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 					{
 						Method:      "GET",
 						Path:        "/root-task",
-						Description: "Получение списка корневых задач текущего пользователя (где id == root_task_id и created_by == текущий пользователь)",
+						Description: "Get list of current user's root tasks (where id == root_task_id and created_by == current user)",
 						Auth:        true,
 						Response: []map[string]interface{}{
 							{
@@ -296,7 +296,7 @@ func InfoHandler() gin.HandlerFunc {
 								"created_at":   "2024-01-20T10:30:00Z",
 								"delete_at":    "2024-04-20T10:30:00Z",
 								"assignee":     "agent1",
-								"description":  "Основная задача 1",
+								"description":  "Main task 1",
 								"status":       "submitted",
 							},
 							{
@@ -304,13 +304,13 @@ func InfoHandler() gin.HandlerFunc {
 								"created_at":   "2024-01-21T14:00:00Z",
 								"delete_at":    nil,
 								"assignee":     "agent2",
-								"description":  "Основная задача 2",
+								"description":  "Main task 2",
 								"status":       "completed",
 							},
 						},
 						Errors: []ErrorInfo{
-							{Code: 401, Description: "Требуется авторизация"},
-							{Code: 500, Description: "Ошибка при получении задач из базы данных"},
+							{Code: 401, Description: "Authorization required"},
+							{Code: 500, Description: "Error retrieving tasks from database"},
 						},
 					},
 				},
@@ -318,11 +318,11 @@ func InfoHandler() gin.HandlerFunc {
 					{
 						Method:      "GET",
 						Path:        "/stat",
-						Description: "Получение статистики по задачам пользователя за указанный период",
+						Description: "Get user task statistics for specified period",
 						Auth:        true,
 						Request: map[string]interface{}{
 							"query_params": map[string]string{
-								"period": "Период для статистики (опциональный, по умолчанию 'all-time'). Возможные значения: today, yesterday, week, month, year, all-time",
+								"period": "Statistics period (optional, default 'all-time'). Possible values: today, yesterday, week, month, year, all-time",
 							},
 						},
 						Response: map[string]interface{}{
@@ -331,12 +331,12 @@ func InfoHandler() gin.HandlerFunc {
 							"in_progress":   3,
 							"new_tasks":     25,
 							"failed_tasks":  2,
-							"_note":         "pending_tasks и in_progress показывают текущее состояние, new_tasks и failed_tasks считаются за указанный период",
+							"_note":         "pending_tasks and in_progress show current state, new_tasks and failed_tasks are counted for specified period",
 						},
 						Errors: []ErrorInfo{
-							{Code: 400, Description: "Неверный параметр period"},
-							{Code: 401, Description: "Требуется авторизация"},
-							{Code: 500, Description: "Ошибка при подсчете статистики"},
+							{Code: 400, Description: "Invalid period parameter"},
+							{Code: 401, Description: "Authorization required"},
+							{Code: 500, Description: "Error calculating statistics"},
 						},
 					},
 				},
@@ -344,124 +344,124 @@ func InfoHandler() gin.HandlerFunc {
 					{
 						Method:      "GET",
 						Path:        "/users-with-tasks",
-						Description: "Получение списка пользователей с активными задачами (из in-memory кэша)",
+						Description: "Get list of users with active tasks (from in-memory cache)",
 						Auth:        true,
 						Request: map[string]interface{}{
 							"query_params": map[string]string{
-								"filter": "Список пользователей через запятую для фильтрации (опциональный). Пример: user1,user2,user3",
+								"filter": "Comma-separated list of users for filtering (optional). Example: user1,user2,user3",
 							},
 						},
 						Response: map[string]interface{}{
 							"users": []string{"user1", "user2", "user3"},
 							"count": 3,
-							"_note": "Если параметр filter указан, возвращаются только пользователи из списка, которые имеют активные задачи",
+							"_note": "If filter parameter is specified, only users from the list who have active tasks are returned",
 						},
 						Errors: []ErrorInfo{
-							{Code: 401, Description: "Требуется авторизация"},
+							{Code: 401, Description: "Authorization required"},
 						},
 					},
 				},
 			},
 		}
 
-		// Добавляем дополнительную информацию о статусах
+		// Add additional information about task statuses
 		info.Endpoints["Task Statuses"] = []Endpoint{
 			{
 				Method:      "INFO",
 				Path:        "",
-				Description: "Возможные статусы задач",
+				Description: "Possible task statuses",
 				Auth:        false,
 				Response: map[string]string{
-					"submitted":      "Задача создана и ожидает взятия в работу",
-					"working":        "Задача в процессе выполнения",
-					"waiting":        "Задача ожидает завершения подзадач",
-					"completed":      "Задача успешно выполнена",
-					"failed":         "Задача завершилась с ошибкой",
-					"canceled":       "Задача отменена",
-					"rejected":       "Задача отклонена",
-					"input-required": "Требуется дополнительный ввод",
+					"submitted":      "Task created and waiting to be taken for work",
+					"working":        "Task in progress",
+					"waiting":        "Task waiting for subtasks completion",
+					"completed":      "Task successfully completed",
+					"failed":         "Task completed with error",
+					"canceled":       "Task canceled",
+					"rejected":       "Task rejected",
+					"input-required": "Additional input required",
 				},
 			},
 		}
 
-		// Добавляем информацию о бизнес-логике
+		// Add information about business logic
 		info.Endpoints["Business Logic"] = []Endpoint{
 			{
 				Method:      "INFO",
 				Path:        "",
-				Description: "Основные правила работы с задачами",
+				Description: "Main rules for working with tasks",
 				Auth:        false,
 				Response: map[string]interface{}{
 					"rules": []string{
-						"1. При создании подзадачи родительская задача автоматически переводится в статус 'waiting'",
-						"2. Подзадачи можно создавать только для задач в статусах: waiting, working, submitted",
-						"3. При завершении (completed) или отмене (canceled) всех подзадач родительская задача автоматически переводится в статус 'submitted'",
-						"4. При завершении или отмене задачи все её активные подзадачи (submitted, working, waiting) рекурсивно отменяются",
-						"5. Только assignee может взять задачу в работу, завершить или провалить её",
-						"6. Assignee или создатель задачи может отменить задачу",
-						"7. Задачи автоматически удаляются через 3 месяца (можно изменить при создании)",
-						"8. Каждая задача имеет root_task_id для отслеживания иерархии",
-						"9. При получении задачи (GET /task) в ответ включаются завершенные подзадачи первого уровня",
-						"10. Только создатель root задачи может просматривать все задачи в её иерархии (GET /root-task/:id/tasks)",
-						"11. In-memory кэш используется для хранения списка пользователей с активными задачами",
-						"12. При старте приложения происходит синхронизация кэша с базой данных",
-						"13. Кэш автоматически синхронизируется с БД каждые 10 минут (настраивается через CACHE_SYNC_INTERVAL)",
-						"14. Автоматическая очистка задач с истекшим DeleteAt запускается каждый час (настраивается через CLEANUP_INTERVAL)",
+						"1. When creating a subtask, parent task is automatically moved to 'waiting' status",
+						"2. Subtasks can only be created for tasks in statuses: waiting, working, submitted",
+						"3. When all subtasks are completed or canceled, parent task is automatically moved to 'submitted' status",
+						"4. When completing or canceling a task, all its active subtasks (submitted, working, waiting) are recursively canceled",
+						"5. Only assignee can take task for work, complete or fail it",
+						"6. Assignee or task creator can cancel task",
+						"7. Tasks are automatically deleted after 3 months (can be changed during creation)",
+						"8. Each task has root_task_id for hierarchy tracking",
+						"9. When getting task (GET /task), response includes completed first-level subtasks",
+						"10. Only root task creator can view all tasks in its hierarchy (GET /root-task/:id/tasks)",
+						"11. In-memory cache is used to store list of users with active tasks",
+						"12. Cache is synchronized with database on application startup",
+						"13. Cache is automatically synchronized with DB every 10 minutes (configurable via CACHE_SYNC_INTERVAL)",
+						"14. Automatic cleanup of tasks with expired DeleteAt runs every hour (configurable via CLEANUP_INTERVAL)",
 					},
 				},
 			},
 		}
 
-		// Добавляем информацию о безопасности
+		// Add security information
 		info.Endpoints["Security"] = []Endpoint{
 			{
 				Method:      "INFO",
 				Path:        "",
-				Description: "Механизмы безопасности",
+				Description: "Security mechanisms",
 				Auth:        false,
 				Response: map[string]interface{}{
 					"features": []string{
-						"1. JWT токены для аутентификации с настраиваемым временем жизни",
-						"2. Rate limiting на эндпоинте /generate-jwt (5 запросов в минуту с одного IP)",
-						"3. Blacklist пользователей через переменную окружения BLACKLISTED_USERS (разделенные запятыми)",
-						"4. Секретный ключ передается через тело POST запроса, а не через URL",
-						"5. Проверка алгоритма подписи JWT для защиты от algorithm confusion атак",
-						"6. Блокировка всех токенов заблокированного пользователя автоматически",
+						"1. JWT tokens for authentication with configurable lifetime",
+						"2. Rate limiting on /generate-jwt endpoint (5 requests per minute per IP)",
+						"3. User blacklist via BLACKLISTED_USERS environment variable (comma-separated)",
+						"4. Secret key passed through POST body, not URL",
+						"5. JWT signature algorithm verification to protect against algorithm confusion attacks",
+						"6. All tokens of blacklisted user are automatically blocked",
 					},
 					"environment_variables": map[string]string{
-						"SECRET_KEY":          "Секретный ключ для подписи JWT токенов (обязательный)",
-						"BLACKLISTED_USERS":   "Список заблокированных пользователей через запятую (опциональный)",
-						"CACHE_SYNC_INTERVAL": "Интервал синхронизации кэша с БД (опциональный, по умолчанию 10m)",
+						"SECRET_KEY":          "Secret key for JWT token signing (required)",
+						"BLACKLISTED_USERS":   "Comma-separated list of blacklisted users (optional)",
+						"CACHE_SYNC_INTERVAL": "Cache synchronization interval with DB (optional, default 10m)",
 					},
 				},
 			},
 		}
 
-		// Добавляем информацию о кэшировании
+		// Add caching information
 		info.Endpoints["In-Memory Cache"] = []Endpoint{
 			{
 				Method:      "INFO",
 				Path:        "",
-				Description: "In-memory кэширование пользователей с активными задачами",
+				Description: "In-memory caching of users with active tasks",
 				Auth:        false,
 				Response: map[string]interface{}{
-					"purpose":         "Быстрое хранение списка пользователей с активными задачами",
-					"data_structure":  "Thread-safe map для хранения уникальных user_id",
-					"sync_on_startup": "Автоматическая синхронизация с БД при старте приложения",
-					"periodic_sync":   "Периодическая синхронизация каждые 10 минут (настраивается через CACHE_SYNC_INTERVAL)",
+					"purpose":         "Fast storage of users list with active tasks",
+					"data_structure":  "Thread-safe map for storing unique user_id",
+					"sync_on_startup": "Automatic synchronization with DB on application startup",
+					"periodic_sync":   "Periodic synchronization every 10 minutes (configurable via CACHE_SYNC_INTERVAL)",
 					"operations": []string{
-						"1. Добавление пользователя при создании задачи в статусе 'submitted'",
-						"2. Добавление пользователя когда родительская задача возвращается в 'submitted'",
-						"3. Удаление пользователя когда у него не остается активных задач (при complete/cancel)",
-						"4. Получение списка всех пользователей с активными задачами через GET /users-with-tasks",
-						"5. Автоматическая полная синхронизация с БД по расписанию",
+						"1. Add user when creating task in 'submitted' status",
+						"2. Add user when parent task returns to 'submitted'",
+						"3. Remove user when they have no active tasks left (on complete/cancel)",
+						"4. Get list of all users with active tasks via GET /users-with-tasks",
+						"5. Automatic full synchronization with DB on schedule",
 					},
 					"benefits": []string{
-						"Мгновенный доступ к списку пользователей",
-						"Нет зависимости от внешних сервисов",
-						"Автоматическая синхронизация при старте",
-						"Периодическая синхронизация для актуальности данных",
-						"Потокобезопасная реализация",
+						"Instant access to users list",
+						"No dependency on external services",
+						"Automatic synchronization on startup",
+						"Periodic synchronization for data freshness",
+						"Thread-safe implementation",
 					},
 				},
 			},
