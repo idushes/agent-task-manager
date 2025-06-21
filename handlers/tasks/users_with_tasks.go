@@ -17,7 +17,7 @@ func GetUsersWithTasksHandler() gin.HandlerFunc {
 		// Получаем параметр filter из query string
 		filterParam := c.Query("filter")
 
-		var filteredUsers []string
+		var filteredUsers []string = make([]string, 0)
 
 		if filterParam != "" {
 			// Разбиваем filter по запятым и очищаем от пробелов
